@@ -1,6 +1,77 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
+  const router = useRouter();
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    agree: false,
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    // 비밀번호 확인
+    if (formData.password !== formData.confirmPassword) {
+      setError("비밀번호가 일치하지 않습니다.");
+      setIsLoading(false);
+      return;
+    }
+
+    // 이용약관 동의 확인
+    if (!formData.agree) {
+      setError("이용약관에 동의해주세요.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // 직접 백엔드 서버로 요청
+      const backendUrl = 'http://localhost:8080';
+      
+      const response = await fetch(`${backendUrl}/api/auth/signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      if (response.ok) {
+        // 회원가입 성공 시 회원가입 완료 페이지로 리다이렉트
+        router.push("/register/success");
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "회원가입에 실패했습니다.");
+      }
+    } catch (error) {
+      setError("서버 연결에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="pb-10">
       <section className="px-6 py-8">
@@ -11,7 +82,13 @@ export default function RegisterPage() {
               <p className="text-gray-600 text-sm">PatentMarket 회원이 되어 특허 거래를 시작하세요</p>
             </div>
             
-            <form className="space-y-6">
+            {error && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                {error}
+              </div>
+            )}
+            
+            <form className="space-y-6" onSubmit={handleSubmit}>
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                   이름
@@ -19,8 +96,12 @@ export default function RegisterPage() {
                 <input
                   type="text"
                   id="name"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border text-black border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="이름을 입력하세요"
+                  required
                 />
               </div>
               
@@ -31,8 +112,12 @@ export default function RegisterPage() {
                 <input
                   type="email"
                   id="email"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border text-black border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="이메일을 입력하세요"
+                  required
                 />
               </div>
               
@@ -43,8 +128,12 @@ export default function RegisterPage() {
                 <input
                   type="password"
                   id="password"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border text-black border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="비밀번호를 입력하세요"
+                  required
                 />
               </div>
               
@@ -55,20 +144,12 @@ export default function RegisterPage() {
                 <input
                   type="password"
                   id="confirmPassword"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border text-black border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="비밀번호를 다시 입력하세요"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                  전화번호
-                </label>
-                <input
-                  type="tel"
-                  id="phone"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  placeholder="전화번호를 입력하세요"
+                  required
                 />
               </div>
               
@@ -76,7 +157,11 @@ export default function RegisterPage() {
                 <input
                   type="checkbox"
                   id="agree"
+                  name="agree"
+                  checked={formData.agree}
+                  onChange={handleInputChange}
                   className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                  required
                 />
                 <label htmlFor="agree" className="ml-2 text-sm text-gray-600">
                   <a href="#" className="text-purple-600 hover:text-purple-700">이용약관</a>과{' '}
@@ -86,9 +171,10 @@ export default function RegisterPage() {
               
               <button
                 type="submit"
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg transition-colors font-medium"
+                disabled={isLoading}
+                className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white py-3 rounded-lg transition-colors font-medium"
               >
-                회원가입
+                {isLoading ? "처리 중..." : "회원가입"}
               </button>
             </form>
             
