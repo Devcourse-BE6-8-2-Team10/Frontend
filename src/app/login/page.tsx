@@ -27,8 +27,8 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // 백엔드 서버로 로그인 요청
-      const backendUrl = 'http://localhost:8080';
+      // 환경변수에서 백엔드 URL 가져오기
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
       
       const response = await fetch(`${backendUrl}/api/auth/login`, {
         method: "POST",
