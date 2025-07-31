@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import apiClient from "@/utils/apiClient";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, isAuthenticated, loading } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -14,6 +15,25 @@ export default function LoginPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // 로그인 상태에서 로그인 페이지 접근 방지
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      router.push("/");
+    }
+  }, [isAuthenticated, loading, router]);
+
+  // 로딩 중이거나 이미 로그인된 경우 로딩 화면 표시
+  if (loading || isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -29,50 +49,37 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // 환경변수에서 백엔드 URL 가져오기
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
-      
-      const response = await fetch(`${backendUrl}/api/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
+      const response = await apiClient.post('/api/auth/login', {
+        email: formData.email,
+        password: formData.password,
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response.data.data) {
+        const { accessToken, refreshToken, memberInfo } = response.data.data;
         
-        // 로그인 성공 시 토큰 저장
-        if (data.data) {
-          const { accessToken, refreshToken, memberInfo } = data.data;
-          
-          // AccessToken만 localStorage에 저장 (보안상 RefreshToken은 서버에서 관리)
-          localStorage.setItem('accessToken', accessToken);
-          
-          // AuthContext에 사용자 정보 저장
-          if (memberInfo) {
-            login({
-              id: memberInfo.id || memberInfo.memberId,
-              email: memberInfo.email,
-              name: memberInfo.name || memberInfo.nickname,
-            });
-          }
-          
-          // 로그인 성공 시 메인 페이지로 리다이렉트
-          router.push("/");
-        } else {
-          setError("로그인 응답 데이터가 올바르지 않습니다.");
+        // AccessToken만 localStorage에 저장 (보안상 RefreshToken은 서버에서 관리)
+        localStorage.setItem('accessToken', accessToken);
+        
+        // AuthContext에 사용자 정보 저장
+        if (memberInfo) {
+          login({
+            id: memberInfo.id || memberInfo.memberId,
+            email: memberInfo.email,
+            name: memberInfo.name || memberInfo.nickname,
+          });
         }
+        
+        // 로그인 성공 시 메인 페이지로 리다이렉트
+        router.push("/");
       } else {
-        const errorData = await response.json();
-        setError(errorData.message || "이메일 또는 비밀번호가 잘못되었습니다.");
+        setError("로그인 응답 데이터가 올바르지 않습니다.");
       }
-    } catch (error) {
-      setError("서버 연결에 실패했습니다. 다시 시도해주세요.");
+    } catch (error: any) {
+      if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else {
+        setError("서버 연결에 실패했습니다. 다시 시도해주세요.");
+      }
     } finally {
       setIsLoading(false);
     }

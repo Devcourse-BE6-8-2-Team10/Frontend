@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import apiClient from "@/utils/apiClient";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { isAuthenticated, loading } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -14,6 +17,25 @@ export default function RegisterPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // 로그인 상태에서 회원가입 페이지 접근 방지
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      router.push("/");
+    }
+  }, [isAuthenticated, loading, router]);
+
+  // 로딩 중이거나 이미 로그인된 경우 로딩 화면 표시
+  if (loading || isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -43,30 +65,22 @@ export default function RegisterPage() {
     }
 
     try {
-      // 환경변수에서 백엔드 URL 가져오기
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
-      
-      const response = await fetch(`${backendUrl}/api/auth/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-        }),
+      const response = await apiClient.post('/api/auth/signup', {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
       });
 
-      if (response.ok) {
+      if (response.status === 200) {
         // 회원가입 성공 시 회원가입 완료 페이지로 리다이렉트
         router.push("/register/success");
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || "회원가입에 실패했습니다.");
       }
-    } catch (error) {
-      setError("서버 연결에 실패했습니다. 다시 시도해주세요.");
+    } catch (error: any) {
+      if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else {
+        setError("서버 연결에 실패했습니다. 다시 시도해주세요.");
+      }
     } finally {
       setIsLoading(false);
     }
