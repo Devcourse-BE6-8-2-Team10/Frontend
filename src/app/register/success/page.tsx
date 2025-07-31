@@ -1,10 +1,28 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function RegisterSuccessPage() {
   const router = useRouter();
+
+  // 뒤로가기 방지
+  useEffect(() => {
+    // 브라우저 히스토리에 현재 페이지를 추가하여 뒤로가기 방지
+    window.history.pushState(null, '', window.location.href);
+    
+    const handlePopState = (event: PopStateEvent) => {
+      // 뒤로가기 시도 시 홈페이지로 자동 이동
+      router.push('/');
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    // 컴포넌트 언마운트 시 이벤트 리스너 제거
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [router]);
 
   const handleLoginClick = () => {
     router.push("/login");
