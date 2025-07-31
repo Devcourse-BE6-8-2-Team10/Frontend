@@ -63,10 +63,10 @@ export default function LoginPage() {
         // AuthContext에 사용자 정보 저장
         if (memberInfo) {
           login({
-            id: memberInfo.id || memberInfo.memberId,
+            id: memberInfo.id.toString(),
             email: memberInfo.email,
-            name: memberInfo.name || memberInfo.nickname,
-          });
+            name: memberInfo.name,
+          }, accessToken);
         }
         
         // 로그인 성공 시 메인 페이지로 리다이렉트

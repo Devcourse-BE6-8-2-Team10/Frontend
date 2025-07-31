@@ -71,10 +71,9 @@ export default function RegisterPage() {
         password: formData.password,
       });
 
-      if (response.status === 200) {
-        // 회원가입 성공 시 회원가입 완료 페이지로 리다이렉트
-        router.push("/register/success");
-      }
+      // 회원가입 성공 시 회원가입 완료 페이지로 리다이렉트
+      router.push("/register/success");
+      
     } catch (error: any) {
       if (error.response?.data?.message) {
         setError(error.response.data.message);
