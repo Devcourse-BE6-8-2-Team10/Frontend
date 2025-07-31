@@ -43,8 +43,8 @@ export default function RegisterPage() {
     }
 
     try {
-      // 직접 백엔드 서버로 요청
-      const backendUrl = 'http://localhost:8080';
+      // 환경변수에서 백엔드 URL 가져오기
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
       
       const response = await fetch(`${backendUrl}/api/auth/signup`, {
         method: "POST",
