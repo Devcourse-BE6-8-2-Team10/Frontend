@@ -1,6 +1,11 @@
+'use client';
+
 import Image from "next/image";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Home() {
+  const { user, isAuthenticated } = useAuth();
+
   return (
     <>
       {/* Hero Section */}
@@ -8,7 +13,28 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-10 text-center max-w-5xl mx-auto shadow-xl">
             <h1 className="text-3xl font-bold text-[#1a365d] mb-4">특허 거래의 새로운 경험</h1>
-            <p className="text-base text-[#1a365d] leading-relaxed">혁신적인 특허와 무형자산을 안전하고 편리하게 거래하세요. 전문가들이 인증한 고품질 특허만을 제공합니다.</p>
+            <p className="text-base text-[#1a365d] leading-relaxed">
+              {isAuthenticated 
+                ? `${user?.name}님을 위한 맞춤 특허를 찾아보세요.` 
+                : '혁신적인 특허와 무형자산을 안전하고 편리하게 거래하세요. 전문가들이 인증한 고품질 특허만을 제공합니다.'
+              }
+            </p>
+            {!isAuthenticated && (
+              <div className="mt-6">
+                <a 
+                  href="/login" 
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors font-medium mr-4"
+                >
+                  로그인
+                </a>
+                <a 
+                  href="/register" 
+                  className="bg-transparent border-2 border-purple-600 text-purple-600 hover:bg-purple-600 hover:text-white px-6 py-3 rounded-lg transition-colors font-medium"
+                >
+                  회원가입
+                </a>
+              </div>
+            )}
           </div>
         </div>
       </section>
