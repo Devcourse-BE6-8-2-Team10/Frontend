@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/contexts/AuthContext";
+import Header from "@/components/Header";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,48 +19,10 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className={inter.className}>
-        <div className="min-h-screen bg-gradient-to-b from-[#2a4fa2] via-[#1a365d] to-[#1a365d]">
-          {/* Header */}
-          <header className="bg-[#1a365d] px-6 py-4">
-            <div className="max-w-7xl mx-auto flex justify-between items-center">
-              <div className="text-white text-xl font-bold">PatentMarket</div>
-              <nav className="flex gap-6 text-white">
-                <a href="/" className="hover:text-gray-300 transition-colors">
-                  홈
-                </a>
-                <a
-                  href="/patents"
-                  className="hover:text-gray-300 transition-colors"
-                >
-                  특허목록
-                </a>
-                <a
-                  href="/mypage"
-                  className="hover:text-gray-300 transition-colors"
-                >
-                  마이페이지
-                </a>
-                <a
-                  href="/login"
-                  className="hover:text-gray-300 transition-colors"
-                >
-                  로그인
-                </a>
-                <a
-                  href="/register"
-                  className="hover:text-gray-300 transition-colors"
-                >
-                  회원가입
-                </a>
-                <a
-                  href="/chat"
-                  className="hover:text-gray-300 transition-colors"
-                >
-                  채팅
-                </a>
-              </nav>
-            </div>
-          </header>
+        <AuthProvider>
+          <div className="min-h-screen bg-gradient-to-b from-[#2a4fa2] via-[#1a365d] to-[#1a365d]">
+            {/* Header */}
+            <Header />
 
           {/* Main Content */}
           <main>{children}</main>
@@ -178,6 +142,7 @@ export default function RootLayout({
             </button>
           </div>
         </div>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -2,9 +2,11 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -51,9 +53,13 @@ export default function LoginPage() {
           // AccessToken만 localStorage에 저장 (보안상 RefreshToken은 서버에서 관리)
           localStorage.setItem('accessToken', accessToken);
           
-          // 사용자 정보 저장
+          // AuthContext에 사용자 정보 저장
           if (memberInfo) {
-            localStorage.setItem('userInfo', JSON.stringify(memberInfo));
+            login({
+              id: memberInfo.id || memberInfo.memberId,
+              email: memberInfo.email,
+              name: memberInfo.name || memberInfo.nickname,
+            });
           }
           
           // 로그인 성공 시 메인 페이지로 리다이렉트

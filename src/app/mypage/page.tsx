@@ -1,6 +1,39 @@
+'use client';
+
 import React from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function MyPage() {
+  const { user, isAuthenticated, loading } = useAuth();
+  const router = useRouter();
+
+  // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, loading, router]);
+
+  // 로딩 중이거나 인증되지 않은 경우 로딩 표시
+  if (loading || !isAuthenticated) {
+    return (
+      <div className="pb-10">
+        <section className="px-6 py-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">로딩 중...</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="pb-10">
       <section className="px-6 py-8">
@@ -14,8 +47,8 @@ export default function MyPage() {
                 <span className="text-purple-600 text-xl">👤</span>
               </div>
               <div>
-                <h2 className="text-lg font-bold text-[#1a365d]">김사용자</h2>
-                <p className="text-gray-600 text-sm">kim@example.com</p>
+                <h2 className="text-lg font-bold text-[#1a365d]">{user?.name || '사용자'}</h2>
+                <p className="text-gray-600 text-sm">{user?.email || '이메일 없음'}</p>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
