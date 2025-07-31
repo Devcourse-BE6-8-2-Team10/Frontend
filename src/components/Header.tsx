@@ -2,14 +2,24 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const Header = () => {
   const { isAuthenticated, user, logout } = useAuth();
+  const router = useRouter();
 
   const handleLogout = async () => {
-    await logout();
-    // 로그아웃 후 홈페이지로 리다이렉트
-    window.location.href = '/';
+    
+    try {
+      await logout();
+      // 로그아웃 후 홈페이지로 리다이렉트
+      router.push('/');
+    } catch (error) {
+      // 로그아웃 실패 시 에러 메시지 출력
+      console.error('로그아웃 실패:', error);
+      // 에러가 발생해도 홈페이지로 리다이렉트
+      router.push('/');
+    }
   };
 
   return (
