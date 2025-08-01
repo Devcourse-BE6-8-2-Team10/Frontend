@@ -107,7 +107,7 @@ export default function ChatRoom() {
 
         {/* 채팅방 목록 */}
         <div className="flex-1 overflow-y-auto">
-          {rooms.map((room) => (
+          {Array.isArray(rooms) && rooms.map((room) => (
             <div
               key={room.id}
               onClick={() => selectRoom(room)}
@@ -120,7 +120,7 @@ export default function ChatRoom() {
             </div>
           ))}
 
-          {rooms.length === 0 && isConnected && (
+          {(!Array.isArray(rooms) || rooms.length === 0) && isConnected && (
             <div className="p-4 text-center text-gray-500">
               <p>채팅방이 없습니다.</p>
               <p className="text-sm">방 생성 버튼을 눌러보세요!</p>

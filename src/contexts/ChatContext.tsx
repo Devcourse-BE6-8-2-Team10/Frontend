@@ -50,15 +50,37 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
-      
+
       await webSocketService.connect(user.email);
-      
-      setState(prev => ({ 
-        ...prev, 
-        isConnected: true, 
-        isLoading: false,
-        // 테스트용 방 생성
-        rooms: [
+
+      const response = await fetch('http://localhost:8080/api/chat/rooms/my', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`, // 사용자 토큰을 헤더에 추가
+          'Content-Type': 'application/json',
+          //'credentials': 'include' // 쿠키를 포함하여 요청
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('채팅방 목록을 불러올 수 없습니다.');
+      }
+
+      const roomsData = await response.json();
+      console.log("서버에서 받은 채팅방 데이터:", roomsData);
+
+      // 서버 응답이 배열인지 확인하고 처리
+      let rooms = [];
+      if (Array.isArray(roomsData)) {
+        rooms = roomsData;
+      } else if (roomsData && Array.isArray(roomsData.data)) {
+        rooms = roomsData.data;
+      } else if (roomsData && roomsData.rooms && Array.isArray(roomsData.rooms)) {
+        rooms = roomsData.rooms;
+      } else {
+        console.warn("서버에서 받은 데이터가 배열 형태가 아닙니다:", roomsData);
+        // 서버 데이터가 없으면 테스트용 방 생성
+        rooms = [
           {
             id: "test-room-1",
             name: "일반 채팅방",
@@ -69,9 +91,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             name: "기술 논의",
             participants: [user.email]
           }
-        ]
+        ];
+      }
+
+      setState(prev => ({
+        ...prev,
+        isConnected: true,
+        isLoading: false,
+        rooms: rooms
       }));
-      
+
       console.log("채팅 연결 완료");
     } catch (error) {
       console.error("채팅 연결 실패:", error);
@@ -144,7 +173,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   // 테스트용 방 생성
   const createTestRoom = useCallback(() => {
     if (!user) return;
-    
+
     const newRoom: ChatRoom = {
       id: `test-room-${Date.now()}`,
       name: `새 채팅방 ${new Date().toLocaleTimeString()}`,
