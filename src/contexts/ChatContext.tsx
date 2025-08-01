@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import { ChatMessage, ChatRoom, webSocketService } from "../utils/websocket";
 import { useAuth } from "./AuthContext";
+import { getAccessTokenCookie } from "../utils/cookieUtils";
 
 interface ChatState {
   rooms: ChatRoom[];
@@ -53,20 +54,35 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
       await webSocketService.connect(user.email);
 
+      // 수동으로 토큰을 헤더에 추가
+      const token = getAccessTokenCookie();
+      console.log("=== 채팅 연결 디버깅 ===");
+      console.log("토큰 존재 여부:", !!token);
+      console.log("토큰 앞 20자:", token ? token.substring(0, 20) + "..." : "없음");
+      console.log("사용자 정보:", user);
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      console.log("요청 헤더:", headers);
+
       const response = await fetch('http://localhost:8080/api/chat/rooms/my', {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`, // 사용자 토큰을 헤더에 추가
-          'Content-Type': 'application/json',
-          //'credentials': 'include' // 쿠키로 바꾸면 주석 해제
-        }
+        headers,
+        credentials: 'include' // 쿠키도 함께 전송
       });
 
       if (!response.ok) {
-        throw new Error('채팅방 목록을 불러올 수 없습니다.');
+        throw new Error(`채팅방 목록을 불러올 수 없습니다. (${response.status})`);
       }
 
-      const roomsData = await response.json();
+      const responseData = await response.json();
+      const roomsData = responseData.data;
       console.log("서버에서 받은 채팅방 데이터:", roomsData);
 
       // 서버 응답이 배열인지 확인하고 처리

@@ -115,7 +115,7 @@ export default function ChatRoom() {
             <button
               onClick={() => {
                 const testRoom = {
-                  id: "4",
+                  id: 4,
                   name: "User1과 User2의 채팅",
                   participants: ["user1@user.com", "test1@user.com"]
                 };
