@@ -29,7 +29,7 @@ const Header = () => {
       <header className="bg-[#1a365d] px-6 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="text-white text-xl font-bold">
-            <Link href="/">PatentMarket</Link>
+            <Link href="/">특허바다</Link>
           </div>
           
           <nav className="flex gap-6 text-white">
@@ -55,7 +55,7 @@ const Header = () => {
     <header className="bg-[#1a365d] px-6 py-4">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <div className="text-white text-xl font-bold">
-          <Link href="/">PatentMarket</Link>
+          <Link href="/">특허바다</Link>
         </div>
         
         <nav className="flex gap-6 text-white">
