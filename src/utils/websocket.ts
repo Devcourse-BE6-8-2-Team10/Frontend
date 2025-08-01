@@ -8,10 +8,11 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   roomId: string;
+  email : string;
 }
 
 export interface ChatRoom {
-  id: string;
+  id: number;
   name: string;
   participants: string[];
   lastMessage?: ChatMessage;
@@ -27,7 +28,7 @@ class WebSocketService {
     return new Promise((resolve, reject) => {
       try {
         console.log("WebSocket 연결 시도...");
-        
+
         this.client = new Client({
           webSocketFactory: () => new SockJS("http://localhost:8080/chat"),
           connectHeaders: {
@@ -126,17 +127,41 @@ class WebSocketService {
     roomId: string,
     message: Omit<ChatMessage, "id" | "timestamp">
   ): void {
+    console.log("=== WebSocket sendMessage 호출 ===");
+    console.log("client 상태:", this.client);
+    console.log("isConnected:", this.isConnected);
+    console.log("roomId:", roomId);
+    console.log("message:", message);
+
     if (!this.client || !this.isConnected) {
-      console.error("WebSocket이 연결되지 않았습니다.");
+      console.error("❌ WebSocket이 연결되지 않았습니다.");
+      console.error("client:", this.client);
+      console.error("isConnected:", this.isConnected);
       return;
     }
 
-    this.client.publish({
-      destination: `/app/chat/${roomId}`,
-      body: JSON.stringify(message),
-    });
-    
-    console.log("메시지 전송:", message);
+    // 백엔드 MessageDto 형식에 맞춰서 전송
+    const messageDto = {
+      senderId: Number(message.senderId),
+      senderName: message.senderName,
+      senderEmail: message.email, // 필요하면 추가
+      content: message.content,
+      chatRoomId: roomId
+    };
+
+    console.log("전송할 messageDto:", messageDto);
+    console.log("destination:", `/app/sendMessage`);
+
+    try {
+      this.client.publish({
+        destination: `/app/sendMessage`, // 백엔드 @MessageMapping과 일치
+        body: JSON.stringify(messageDto),
+      });
+
+      console.log("✅ 메시지 전송 완료:", messageDto);
+    } catch (error) {
+      console.error("❌ 메시지 전송 중 에러:", error);
+    }
   }
 
   // 연결 상태 확인
