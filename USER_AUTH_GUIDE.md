@@ -1,57 +1,62 @@
-# 사용자 인증 시스템 사용 가이드
+# 사용자 인증 시스템 가이드
 
 ## 개요
 
-이 프로젝트는 React Context API를 사용하여 전역 사용자 인증 상태를 관리합니다. JWT 토큰 기반의 localStorage 저장 방식을 사용하여 로그인 상태를 유지하며, 모든 페이지에서 사용자 정보에 접근할 수 있습니다.
+이 프로젝트는 JWT(JSON Web Token) 기반의 인증 시스템을 사용합니다. 
+AccessToken과 RefreshToken을 쿠키로 관리하여 자동 전송되는 편리한 구조입니다.
 
-## 주요 기능
+## 인증 구조
 
-### 1. 로그인 상태에 따른 헤더 메뉴 변경
+### 토큰 관리 방식
+- **AccessToken**: 쿠키에 저장 (자동 전송)
+- **RefreshToken**: HttpOnly 쿠키에 저장 (보안 강화)
 
-- **로그인 전**: 홈, 특허목록, 로그인, 회원가입
-- **로그인 후**: 홈, 특허목록, 채팅, 마이페이지, 로그아웃
+### 장점
+- ✅ **편의성**: 헤더 없이도 API 호출 가능
+- ✅ **자동화**: 쿠키가 자동으로 전송됨
+- ✅ **보안**: RefreshToken은 HttpOnly로 XSS 공격 방지
+- ✅ **호환성**: 웹과 앱 환경 모두 지원
 
-### 2. 사용자 정보 관리
+## 사용 방법
 
-- **localStorage 기반 저장**: 사용자 정보와 JWT 토큰을 localStorage에 저장
-- **자동 토큰 만료 확인**: JWT 토큰의 만료시간을 자동으로 확인하여 보안 강화
-- **페이지 새로고침 시 로그인 상태 유지**: localStorage에서 인증 정보를 복원
-- **전역 상태 관리**: 모든 컴포넌트에서 사용자 정보 접근 가능
-
-## 저장 방식
-
-### localStorage에 저장되는 데이터
+### 1. 로그인
 ```javascript
-// 사용자 정보
-localStorage.setItem('userData', JSON.stringify({
-  id: "user123",
-  email: "user@example.com", 
-  name: "사용자명"
-}));
+const response = await apiClient.post('/api/auth/login', {
+  email: 'user@example.com',
+  password: 'password'
+});
 
-// JWT AccessToken
-localStorage.setItem('accessToken', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...");
+// 로그인 성공 시 쿠키에 자동으로 토큰이 저장됩니다
 ```
 
-### 토큰 만료 확인
-- JWT 토큰의 `exp` 필드를 확인하여 자동으로 만료된 토큰 처리
-- 만료된 토큰이 감지되면 자동으로 로그아웃 처리
+### 2. API 호출
+```javascript
+// 방법 1: fetch 사용 (헤더 없이도 자동 전송)
+const response = await fetch('http://localhost:8080/api/v1/posts/1');
 
-## 사용법
+// 방법 2: apiClient 사용 (권장)
+const response = await apiClient.get('/api/v1/posts/1');
+```
 
-### 1. 다른 페이지에서 사용자 정보 가져오기
+### 3. 사용자 정보 조회
+```javascript
+const userInfo = await apiClient.get('/api/auth/me');
+```
 
-```tsx
-'use client';
+### 4. 로그아웃
+```javascript
+await apiClient.post('/api/auth/logout');
+// 로그아웃 시 쿠키가 자동으로 삭제됩니다
+```
 
+## React 컴포넌트에서 사용
+
+### AuthContext 사용
+```javascript
 import { useAuth } from '@/contexts/AuthContext';
 
-const MyComponent = () => {
-  const { user, isAuthenticated, loading, accessToken } = useAuth();
-
-  if (loading) {
-    return <div>로딩 중...</div>;
-  }
+function MyComponent() {
+  const { user, isAuthenticated, login, logout } = useAuth();
 
   if (!isAuthenticated) {
     return <div>로그인이 필요합니다.</div>;
@@ -60,158 +65,114 @@ const MyComponent = () => {
   return (
     <div>
       <h1>안녕하세요, {user?.name}님!</h1>
-      <p>이메일: {user?.email}</p>
-      <p>사용자 ID: {user?.id}</p>
+      <button onClick={logout}>로그아웃</button>
     </div>
   );
-};
+}
 ```
 
-### 2. 인증이 필요한 페이지 보호하기
-
-```tsx
-'use client';
-
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-
-const ProtectedPage = () => {
-  const { isAuthenticated, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isAuthenticated, loading, router]);
-
-  if (loading || !isAuthenticated) {
-    return <div>로딩 중...</div>;
-  }
-
-  return <div>보호된 페이지 내용</div>;
-};
-```
-
-### 3. API 요청 시 토큰 사용하기
-
-```tsx
-'use client';
-
+### 로그인 페이지 예시
+```javascript
 import { useAuth } from '@/contexts/AuthContext';
 import apiClient from '@/utils/apiClient';
 
-const ApiComponent = () => {
-  const { user } = useAuth();
+function LoginPage() {
+  const { login } = useAuth();
 
-  const fetchData = async () => {
+  const handleLogin = async (email, password) => {
     try {
-      // 자동으로 Authorization 헤더가 추가됩니다!
-      const response = await apiClient.get('/api/protected-data');
-      console.log(response.data);
-    } catch (error) {
-      console.error('API 호출 실패:', error);
-    }
-  };
+      const response = await apiClient.post('/api/auth/login', {
+        email,
+        password
+      });
 
-  const createData = async (data: any) => {
-    try {
-      const response = await apiClient.post('/api/protected-data', data);
-      console.log('생성된 데이터:', response.data);
+      if (response.data.data) {
+        const { accessToken, refreshToken, memberInfo } = response.data.data;
+        
+        login({
+          id: memberInfo.id.toString(),
+          email: memberInfo.email,
+          name: memberInfo.name,
+        }, accessToken, refreshToken);
+
+        // 로그인 성공 후 리다이렉트
+        router.push('/');
+      }
     } catch (error) {
-      console.error('데이터 생성 실패:', error);
+      console.error('로그인 실패:', error);
     }
   };
 
   return (
-    <div>
-      <button onClick={fetchData}>데이터 가져오기</button>
-      <button onClick={() => createData({ name: '새 데이터' })}>데이터 생성</button>
-    </div>
+    <form onSubmit={handleLogin}>
+      {/* 로그인 폼 */}
+    </form>
   );
-};
-```
-
-### 4. API 클라이언트 특징
-
-- **자동 토큰 추가**: 모든 요청에 자동으로 `Authorization: Bearer {token}` 헤더 추가
-- **자동 에러 처리**: 401 에러 시 자동 로그아웃 및 로그인 페이지 리다이렉트
-- **간편한 사용**: `apiClient.get()`, `apiClient.post()` 등으로 간단하게 사용
-- **타입 안전성**: TypeScript 지원으로 타입 안전성 보장
-
-## AuthContext API
-
-### useAuth() 훅이 제공하는 값들
-
-- `user`: 사용자 정보 객체 (null이면 로그인되지 않음)
-- `isAuthenticated`: 로그인 상태 (boolean)
-- `accessToken`: JWT AccessToken (string | null)
-- `login(userData)`: 로그인 함수
-- `logout()`: 로그아웃 함수
-- `loading`: 초기 로딩 상태 (boolean)
-
-### User 객체 구조
-
-```tsx
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  // 필요한 다른 사용자 정보들
 }
 ```
 
-## 파일 구조
+## 토큰 관리
 
+### 토큰 자동 갱신
+- AccessToken이 만료되면 RefreshToken을 사용하여 자동 갱신
+- 갱신된 토큰은 쿠키에 자동 저장
+
+### 토큰 만료 처리
+- 401/403 에러 시 자동으로 로그아웃 처리
+- 로그인 페이지로 자동 리다이렉트
+
+## 보안 고려사항
+
+### 쿠키 설정
+- **AccessToken**: HttpOnly=false (JavaScript 접근 가능)
+- **RefreshToken**: HttpOnly=true (JavaScript 접근 불가, 보안 강화)
+- **Secure**: 개발환경=false, 프로덕션=true
+- **SameSite**: Strict (CSRF 공격 방지)
+
+### CORS 설정
+- 프론트엔드와 백엔드 간 쿠키 전송을 위한 설정 필요
+- `credentials: 'include'` 설정 필요
+
+## 개발 환경 설정
+
+### Frontend (.env.local)
 ```
-src/
-├── contexts/
-│   └── AuthContext.tsx          # 인증 컨텍스트 (localStorage 기반)
-├── components/
-│   └── Header.tsx               # 동적 헤더 컴포넌트
-└── app/
-    ├── layout.tsx               # AuthProvider 래핑
-    ├── login/page.tsx           # 로그인 페이지
-    ├── mypage/page.tsx          # 마이페이지 (인증 필요)
-    └── page.tsx                 # 홈페이지 (개인화된 환영 메시지)
+NEXT_PUBLIC_BACKEND_URL=http://localhost:8080
 ```
 
-## 보안 특징
+### Backend (application.yml)
+```yaml
+jwt:
+  access-token-validity: 1800000  # 30분
+  refresh-token-validity: 604800000  # 7일
+```
 
-### 1. JWT 토큰 기반 인증
-- AccessToken을 사용한 API 인증
-- 토큰 만료시간 자동 확인
-- 만료된 토큰 자동 로그아웃 처리
+## 문제 해결
 
-### 2. localStorage 보안 고려사항
-- XSS 공격에 대한 주의 필요
-- 민감한 정보는 최소화하여 저장
-- 토큰 만료시간을 적절히 설정 (15분-1시간 권장)
+### 쿠키가 전송되지 않는 경우
+1. 도메인과 경로 설정 확인
+2. CORS 설정 확인
+3. 브라우저 개발자 도구에서 쿠키 확인
 
-## 주의사항
+### 토큰 만료 시
+1. 자동 갱신이 실패하면 로그인 페이지로 리다이렉트
+2. RefreshToken도 만료된 경우 재로그인 필요
 
-1. **클라이언트 컴포넌트**: `useAuth()` 훅은 클라이언트 컴포넌트에서만 사용할 수 있습니다.
-2. **로딩 상태**: 초기 로딩 중에는 `loading` 상태를 확인하여 적절한 UI를 표시하세요.
-3. **인증 확인**: 보호된 페이지에서는 `isAuthenticated` 상태를 확인하여 리다이렉트를 처리하세요.
-4. **토큰 관리**: `accessToken`을 API 요청 시 Authorization 헤더에 포함하여 사용하세요.
-5. **localStorage 제한**: 브라우저의 localStorage 용량 제한과 보안 정책을 고려하세요.
+## API 엔드포인트
 
-## 예제 시나리오
+### 인증 관련
+- `POST /api/auth/login` - 로그인
+- `POST /api/auth/logout` - 로그아웃
+- `GET /api/auth/me` - 사용자 정보 조회
+- `POST /api/auth/reissue` - 토큰 재발급
 
-1. **사용자가 로그인하지 않은 상태**
-   - 헤더에 "로그인", "회원가입" 메뉴 표시
-   - 마이페이지 접근 시 로그인 페이지로 리다이렉트
-   - 홈페이지에 일반적인 환영 메시지 표시
+### 보호된 API 예시
+- `GET /api/v1/posts` - 게시글 목록
+- `POST /api/v1/posts` - 게시글 작성
+- `GET /api/member/profile` - 회원 프로필
 
-2. **사용자가 로그인한 상태**
-   - 헤더에 "채팅", "마이페이지", "로그아웃" 메뉴 표시
-   - 마이페이지에서 실제 사용자 정보 표시
-   - 홈페이지에 개인화된 환영 메시지 표시
-   - 모든 페이지에서 사용자 정보 접근 가능
-   - API 요청 시 자동으로 토큰 포함
+## 참고 사항
 
-3. **토큰 만료 시나리오**
-   - JWT 토큰이 만료되면 자동으로 로그아웃 처리
-   - 사용자는 다시 로그인해야 함
-   - 보안을 위해 적절한 만료시간 설정 필요 
+- 모든 API 호출은 쿠키를 통해 자동으로 인증됩니다
+- 별도의 Authorization 헤더 설정이 필요하지 않습니다
+- 토큰 관리는 백엔드에서 자동으로 처리됩니다 

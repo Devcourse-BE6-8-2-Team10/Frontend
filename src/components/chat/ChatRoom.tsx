@@ -1,0 +1,210 @@
+"use client";
+
+import React, { useState, useRef, useEffect } from "react";
+import { useChat } from "@/contexts/ChatContext";
+import { useAuth } from "@/contexts/AuthContext";
+
+export default function ChatRoom() {
+  const {
+    rooms,
+    currentRoom,
+    messages,
+    isConnected,
+    isLoading,
+    error,
+    connectToChat,
+    disconnectFromChat,
+    selectRoom,
+    sendMessage,
+    createTestRoom
+  } = useChat();
+
+  const { user, isAuthenticated } = useAuth();
+  const [messageInput, setMessageInput] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 메시지 목록 스크롤을 맨 아래로
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // 메시지 전송
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (messageInput.trim()) {
+      sendMessage(messageInput.trim());
+      setMessageInput("");
+    }
+  };
+
+  // 로그인하지 않은 경우
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-100">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">채팅을 이용하려면 로그인이 필요합니다</h2>
+          <p className="text-gray-600">로그인 후 다시 시도해주세요.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen bg-gray-100">
+      {/* 사이드바 - 채팅방 목록 */}
+      <div className="w-1/4 bg-white border-r border-gray-300 flex flex-col">
+        <div className="p-4 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-gray-800">채팅방</h2>
+          <p className="text-sm text-gray-600">안녕하세요, {user.name}님!</p>
+        </div>
+
+        {/* 연결 상태 및 컨트롤 */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center gap-2 mb-3">
+            <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <span className="text-sm font-medium">
+              {isConnected ? '연결됨' : '연결 안됨'}
+            </span>
+          </div>
+
+          <div className="flex gap-2">
+            {!isConnected ? (
+              <button
+                onClick={connectToChat}
+                disabled={isLoading}
+                className="flex-1 px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 text-sm"
+              >
+                {isLoading ? '연결 중...' : '채팅 연결'}
+              </button>
+            ) : (
+              <button
+                onClick={disconnectFromChat}
+                className="flex-1 px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+              >
+                연결 해제
+              </button>
+            )}
+
+            <button
+              onClick={createTestRoom}
+              className="px-3 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
+            >
+              방 생성
+            </button>
+          </div>
+        </div>
+
+        {/* 에러 메시지 */}
+        {error && (
+          <div className="p-4 bg-red-50 border-b border-red-200">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
+
+        {/* 채팅방 목록 */}
+        <div className="flex-1 overflow-y-auto">
+          {rooms.map((room) => (
+            <div
+              key={room.id}
+              onClick={() => selectRoom(room)}
+              className={`p-4 cursor-pointer border-b border-gray-100 hover:bg-gray-50 ${
+                currentRoom?.id === room.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+              }`}
+            >
+              <h3 className="font-medium text-gray-800">{room.name}</h3>
+              <p className="text-sm text-gray-500">{room.participants.length}명 참여</p>
+            </div>
+          ))}
+
+          {rooms.length === 0 && isConnected && (
+            <div className="p-4 text-center text-gray-500">
+              <p>채팅방이 없습니다.</p>
+              <p className="text-sm">방 생성 버튼을 눌러보세요!</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 메인 채팅 영역 */}
+      <div className="flex-1 flex flex-col">
+        {currentRoom ? (
+          <>
+            {/* 채팅방 헤더 */}
+            <div className="p-4 bg-white border-b border-gray-200">
+              <h1 className="text-xl font-bold text-gray-800">{currentRoom.name}</h1>
+              <p className="text-sm text-gray-600">방 ID: {currentRoom.id}</p>
+            </div>
+
+            {/* 메시지 목록 */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.map((message, index) => (
+                <div
+                  key={`${message.id || index}`}
+                  className={`flex ${message.senderId === user.id ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                      message.senderId === user.id
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-white text-gray-800 border border-gray-200'
+                    }`}
+                  >
+                    {message.senderId !== user.id && (
+                      <p className="text-xs font-medium mb-1 opacity-70">
+                        {message.senderName}
+                      </p>
+                    )}
+                    <p>{message.content}</p>
+                    <p className={`text-xs mt-1 ${
+                      message.senderId === user.id ? 'text-blue-100' : 'text-gray-500'
+                    }`}>
+                      {new Date(message.timestamp).toLocaleTimeString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* 메시지 입력 */}
+            <div className="p-4 bg-white border-t border-gray-200">
+              <form onSubmit={handleSendMessage} className="flex gap-2">
+                <input
+                  type="text"
+                  value={messageInput}
+                  onChange={(e) => setMessageInput(e.target.value)}
+                  placeholder="메시지를 입력하세요..."
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={!isConnected}
+                />
+                <button
+                  type="submit"
+                  disabled={!isConnected || !messageInput.trim()}
+                  className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+                >
+                  전송
+                </button>
+              </form>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center bg-gray-50">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-400 mb-2">채팅방을 선택해주세요</h2>
+              <p className="text-gray-500">
+                {isConnected
+                  ? "왼쪽에서 채팅방을 선택하거나 새 방을 만들어보세요"
+                  : "먼저 채팅에 연결해주세요"
+                }
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

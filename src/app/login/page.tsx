@@ -11,7 +11,6 @@ export default function LoginPage() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    rememberMe: false,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -36,10 +35,10 @@ export default function LoginPage() {
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: value,
     }));
   };
 
@@ -57,16 +56,13 @@ export default function LoginPage() {
       if (response.data.data) {
         const { accessToken, refreshToken, memberInfo } = response.data.data;
         
-        // AccessToken만 localStorage에 저장 (보안상 RefreshToken은 서버에서 관리)
-        localStorage.setItem('accessToken', accessToken);
-        
-        // AuthContext에 사용자 정보 저장
+        // AuthContext에 사용자 정보 저장 (쿠키에 자동으로 토큰이 저장됨)
         if (memberInfo) {
           login({
             id: memberInfo.id.toString(),
             email: memberInfo.email,
             name: memberInfo.name,
-          }, accessToken);
+          }, accessToken, refreshToken);
         }
         
         // 로그인 성공 시 메인 페이지로 리다이렉트
@@ -134,17 +130,7 @@ export default function LoginPage() {
                 />
               </div>
               
-              <div className="flex items-center justify-between">
-                <label className="flex items-center">
-                  <input 
-                    type="checkbox" 
-                    name="rememberMe"
-                    checked={formData.rememberMe}
-                    onChange={handleInputChange}
-                    className="rounded border-gray-300 text-purple-600 focus:ring-purple-500" 
-                  />
-                  <span className="ml-2 text-sm text-gray-600">로그인 상태 유지</span>
-                </label>
+              <div className="flex items-center justify-end">
                 <a href="#" className="text-sm text-purple-600 hover:text-purple-700">
                   비밀번호 찾기
                 </a>
