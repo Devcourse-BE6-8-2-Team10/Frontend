@@ -7,7 +7,7 @@ import Header from "@/components/Header";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "PatentMarket",
+  title: "특허바다",
   description: "혁신적인 특허와 무형자산을 안전하고 편리하게 거래하세요",
 };
 
@@ -45,7 +45,7 @@ export default function RootLayout({
                     <ul className="space-y-2 text-sm">
                       <li>
                         <a
-                          href="#"
+                          href="/patents/search"
                           className="text-gray-300 hover:text-white transition-colors"
                         >
                           특허 검색
@@ -53,7 +53,7 @@ export default function RootLayout({
                       </li>
                       <li>
                         <a
-                          href="#"
+                          href="/patents/register"
                           className="text-gray-300 hover:text-white transition-colors"
                         >
                           특허 등록
@@ -61,7 +61,7 @@ export default function RootLayout({
                       </li>
                       <li>
                         <a
-                          href="#"
+                          href="/trading"
                           className="text-gray-300 hover:text-white transition-colors"
                         >
                           거래 중개
@@ -69,7 +69,7 @@ export default function RootLayout({
                       </li>
                       <li>
                         <a
-                          href="#"
+                          href="/legal/consultation"
                           className="text-gray-300 hover:text-white transition-colors"
                         >
                           법률 자문
@@ -82,7 +82,7 @@ export default function RootLayout({
                     <ul className="space-y-2 text-sm">
                       <li>
                         <a
-                          href="#"
+                          href="/legal/faq"
                           className="text-gray-300 hover:text-white transition-colors"
                         >
                           자주 묻는 질문
@@ -90,7 +90,7 @@ export default function RootLayout({
                       </li>
                       <li>
                         <a
-                          href="#"
+                          href="/support/inquiry"
                           className="text-gray-300 hover:text-white transition-colors"
                         >
                           1:1 문의
@@ -98,7 +98,7 @@ export default function RootLayout({
                       </li>
                       <li>
                         <a
-                          href="#"
+                          href="/legal/terms"
                           className="text-gray-300 hover:text-white transition-colors"
                         >
                           이용약관
@@ -106,7 +106,7 @@ export default function RootLayout({
                       </li>
                       <li>
                         <a
-                          href="#"
+                          href="/legal/privacy"
                           className="text-gray-300 hover:text-white transition-colors"
                         >
                           개인정보처리방침
@@ -129,7 +129,7 @@ export default function RootLayout({
                 </div>
                 <div className="border-t border-gray-600 mt-8 pt-8 text-center">
                   <p className="text-gray-300 text-sm">
-                    © 2024 PatentMarket. All rights reserved.
+                    © 2024 특허바다. All rights reserved.
                   </p>
                 </div>
               </div>
