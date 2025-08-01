@@ -1,30 +1,175 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
+import apiClient from "@/utils/apiClient";
+import { useAuth } from "@/contexts/AuthContext";
+import { useParams } from "next/navigation";
+
+// Post 상세 정보 타입 정의 (백엔드 PostDetailDTO.java 참고)
+interface PostDetail {
+  id: number;
+  title: string;
+  description: string;
+  category: string;
+  price: number;
+  status: string;
+  favoriteCnt: number;
+  isLiked: boolean;
+  createdAt: string;
+  modifiedAt: string;
+}
+
+// 카테고리에 따른 이모지, 배경색, 텍스트색 매핑
+// Post.java의 Category enum 참고
+const emojiMap: { [key: string]: string } = {
+  "물건발명": "💡",
+  "방법발명": "🧠",
+  "용도발명": "🛠️",
+  "디자인권": "🎨",
+  "상표권": "™️",
+  "저작권": "📝",
+  "기타": "✨"
+};
+
+const colorMap: { [key: string]: { bg: string; text: string } } = {
+  "물건발명": { bg: "bg-pink-100", text: "text-pink-600" },
+  "방법발명": { bg: "bg-blue-100", text: "text-blue-600" },
+  "용도발명": { bg: "bg-green-100", text: "text-green-600" },
+  "디자인권": { bg: "bg-purple-100", text: "text-purple-600" },
+  "상표권": { bg: "bg-orange-100", text: "text-orange-600" },
+  "저작권": { bg: "bg-indigo-100", text: "text-indigo-600" },
+  "기타": { bg: "bg-yellow-100", text: "text-yellow-600" },
+};
+
+// API 호출 함수
+const fetchPostDetail = async (postId: string) => {
+  // 실제 백엔드 PostController.java의 GET /api/posts/{postId} 엔드포인트 호출
+  const response = await apiClient.get(`/api/posts/${postId}`);
+  
+  const postData = response.data;
+  // 백엔드에서 받은 데이터와 프론트엔드 예시 데이터를 조합
+  return {
+    ...postData,
+    owner: "김발명가", // 예시 데이터
+    patentNumber: "KR-2024-001234", // 예시 데이터
+    applicationDate: postData.createdAt ? new Date(postData.createdAt).toLocaleDateString("ko-KR") : "N/A",
+    publicationDate: postData.createdAt ? new Date(postData.createdAt).toLocaleDateString("ko-KR") : "N/A",
+    registrationDate: postData.modifiedAt ? new Date(postData.modifiedAt).toLocaleDateString("ko-KR") : "N/A",
+    mainClass: "G10L 15/00", // 예시 데이터
+    subClass: "G10L 15/22", // 예시 데이터
+    techField: "AI/음성인식", // 예시 데이터
+    abstract: postData.description,
+  };
+};
 
 export default function PatentDetailPage() {
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const params = useParams();
+  const postId = params.id;
+  
+  const [post, setPost] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [likeLoading, setLikeLoading] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading) {
+      if (!isAuthenticated) {
+        window.location.href = '/login';
+      } else if (postId) {
+        const loadPost = async () => {
+          setLoading(true);
+          try {
+            const data = await fetchPostDetail(postId as string);
+            setPost(data);
+          } catch (error) {
+            console.error("게시글 상세 조회 실패:", error);
+            setPost(null);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        loadPost();
+      }
+    }
+  }, [authLoading, isAuthenticated, postId]);
+
+  // 찜 등록/해제 기능
+  const toggleLike = async () => {
+    if (!isAuthenticated) {
+      alert("로그인이 필요합니다.");
+      window.location.href = '/login';
+      return;
+    }
+    if (!post || likeLoading) return;
+    setLikeLoading(true);
+
+    try {
+      const endpoint = `/api/posts/${post.id}/favorite`;
+      const response = post.isLiked
+        ? await apiClient.delete(endpoint)
+        : await apiClient.post(endpoint);
+
+      if (response.status === 200) {
+        setPost((prevPost: any) => ({
+          ...prevPost,
+          isLiked: !prevPost.isLiked,
+          favoriteCnt: prevPost.isLiked ? prevPost.favoriteCnt - 1 : prevPost.favoriteCnt + 1
+        }));
+      }
+    } catch (error) {
+      console.error("찜 토글 오류:", error);
+    } finally {
+      setLikeLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen text-gray-500">
+        <div className="flex flex-col items-center">
+          <div className="w-16 h-16 border-4 border-t-4 border-gray-200 border-t-purple-500 rounded-full animate-spin mb-4"></div>
+          <div>로딩 중...</div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!post) {
+    return (
+      <div className="flex items-center justify-center h-screen text-gray-500">
+        <div className="text-xl">게시글을 찾을 수 없습니다.</div>
+      </div>
+    );
+  }
+
+  const categoryStyle = colorMap[post.category] || { bg: "bg-gray-100", text: "text-gray-600" };
+
   return (
     <div className="pb-10">
       <section className="px-6 py-8">
         <div className="max-w-4xl mx-auto">
           {/* Breadcrumb */}
-          <div className="text-white text-sm mb-6">
-            <a href="/" className="hover:text-gray-300">홈</a> &gt; 
-            <a href="/patents" className="hover:text-gray-300">특허목록</a> &gt; 
+          <div className="text-gray-400 text-sm mb-6">
+            <a href="/" className="hover:text-gray-200">홈</a> &gt; 
+            <a href="/patents" className="hover:text-gray-200">특허목록</a> &gt; 
             <span>특허 상세</span>
           </div>
           
           {/* Patent Detail Card */}
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-8 shadow-xl">
-            <div className="flex items-start gap-6 mb-6">
-              <div className="bg-pink-100 rounded-full w-16 h-16 flex items-center justify-center">
-                <span className="text-pink-600 text-2xl">🔊</span>
+            <div className="flex flex-col md:flex-row items-start gap-6 mb-6">
+              <div className={`${categoryStyle.bg} rounded-full w-16 h-16 flex items-center justify-center flex-shrink-0`}>
+                <span className={`${categoryStyle.text} text-2xl`}>{emojiMap[post.category] || '❓'}</span>
               </div>
               <div className="flex-1">
-                <h1 className="text-2xl font-bold text-[#1a365d] mb-2">AI 기반 음성인식 알고리즘 특허</h1>
-                <p className="text-gray-600 mb-4">혁신적인 음성인식 기술로 다양한 언어를 정확하게 인식하는 특허입니다.</p>
-                <div className="flex items-center gap-4">
-                  <span className="font-bold text-xl text-[#1a365d]">₩15,000,000</span>
-                  <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">판매중</span>
-                  <span className="text-gray-500">소유자: 김발명가</span>
+                <h1 className="text-2xl font-bold text-[#1a365d] mb-2">{post.title}</h1>
+                <p className="text-gray-600 mb-4">{post.description}</p>
+                <div className="flex flex-wrap items-center gap-4">
+                  <span className="font-bold text-xl text-[#1a365d]">₩{post.price.toLocaleString()}</span>
+                  <span className={`${post.status === '판매중' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-3 py-1 rounded-full text-sm`}>{post.status}</span>
+                  <span className="text-gray-500">찜 수: {post.favoriteCnt}</span>
+                  <span className="text-gray-500">소유자: {post.owner}</span>
                 </div>
               </div>
             </div>
@@ -36,19 +181,19 @@ export default function PatentDetailPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600">특허번호:</span>
-                    <span>KR-2024-001234</span>
+                    <span>{post.patentNumber}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">출원일:</span>
-                    <span>2024.01.15</span>
+                    <span>{post.applicationDate}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">공개일:</span>
-                    <span>2024.07.15</span>
+                    <span>{post.publicationDate}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">등록일:</span>
-                    <span>2024.12.01</span>
+                    <span>{post.registrationDate}</span>
                   </div>
                 </div>
               </div>
@@ -57,15 +202,15 @@ export default function PatentDetailPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600">주분류:</span>
-                    <span>G10L 15/00</span>
+                    <span>{post.mainClass}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">부분류:</span>
-                    <span>G10L 15/22</span>
+                    <span>{post.subClass}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">기술분야:</span>
-                    <span>AI/음성인식</span>
+                    <span>{post.techField}</span>
                   </div>
                 </div>
               </div>
@@ -75,22 +220,23 @@ export default function PatentDetailPage() {
             <div className="mb-6">
               <h3 className="font-bold text-[#1a365d] mb-3">요약</h3>
               <p className="text-gray-700 leading-relaxed">
-                본 발명은 다국어 음성인식을 위한 혁신적인 알고리즘에 관한 것으로, 
-                딥러닝 기술을 활용하여 다양한 언어의 음성을 정확하게 인식하고 
-                텍스트로 변환하는 기술입니다. 특히 노이즈 환경에서도 높은 인식률을 
-                보장하며, 실시간 처리 속도를 크게 향상시켰습니다.
+                {post.abstract}
               </p>
             </div>
             
             {/* Action Buttons */}
-            <div className="flex gap-4">
-              <button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors flex-1">
                 구매 문의
               </button>
-              <button className="border border-purple-600 text-purple-600 hover:bg-purple-600 hover:text-white px-6 py-3 rounded-lg transition-colors">
-                찜하기
+              <button 
+                className="border border-purple-600 text-purple-600 hover:bg-purple-600 hover:text-white px-6 py-3 rounded-lg transition-colors flex-1"
+                onClick={toggleLike}
+                disabled={likeLoading}
+              >
+                {post.isLiked ? '❤️ 찜하기 취소' : '🤍 찜하기'}
               </button>
-              <button className="border border-gray-300 text-gray-600 hover:bg-gray-50 px-6 py-3 rounded-lg transition-colors">
+              <button className="border border-gray-300 text-gray-600 hover:bg-gray-50 px-6 py-3 rounded-lg transition-colors flex-1">
                 공유하기
               </button>
             </div>
