@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import apiClient from "@/utils/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 // Post 상세 정보 타입 정의 (백엔드 PostDetailDTO.java 참고)
 interface PostDetail {
@@ -17,6 +17,15 @@ interface PostDetail {
   isLiked: boolean;
   createdAt: string;
   modifiedAt: string;
+  owner: string; // 예시 데이터, 실제로는 User 정보가 필요
+  patentNumber: string; // 예시 데이터
+  applicationDate: string;
+  publicationDate: string;
+  registrationDate: string;
+  mainClass: string; // 예시 데이터
+  subClass: string; // 예시 데이터
+  techField: string; // 예시 데이터
+  abstract: string;
 }
 
 // 카테고리에 따른 이모지, 배경색, 텍스트색 매핑
@@ -46,12 +55,12 @@ const fetchPostDetail = async (postId: string) => {
   // 실제 백엔드 PostController.java의 GET /api/posts/{postId} 엔드포인트 호출
   const response = await apiClient.get(`/api/posts/${postId}`);
   
-  const postData = response.data;
+  const postData = response.data.data;
   // 백엔드에서 받은 데이터와 프론트엔드 예시 데이터를 조합
   return {
     ...postData,
-    owner: "김발명가", // 예시 데이터
-    patentNumber: "KR-2024-001234", // 예시 데이터
+    owner: "김발명가", // TODO: 실제 사용자 정보로 교체 필요
+    patentNumber: `KR-2024-${String(postData.id).padStart(6, '0')}`, // 예시 데이터
     applicationDate: postData.createdAt ? new Date(postData.createdAt).toLocaleDateString("ko-KR") : "N/A",
     publicationDate: postData.createdAt ? new Date(postData.createdAt).toLocaleDateString("ko-KR") : "N/A",
     registrationDate: postData.modifiedAt ? new Date(postData.modifiedAt).toLocaleDateString("ko-KR") : "N/A",
@@ -62,37 +71,55 @@ const fetchPostDetail = async (postId: string) => {
   };
 };
 
+const fetchFiles = async (postId: string) => {
+  try {
+    const response = await apiClient.get(`/api/posts/${postId}/files`);
+    return response.data.data || [];
+  } catch (error) {
+    console.error(`Failed to fetch files for post ${postId}:`, error);
+    return [];
+  }
+};
+
 export default function PatentDetailPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const router = useRouter();
   const params = useParams();
   const postId = params.id;
   
   const [post, setPost] = useState<any>(null);
+  const [fileUrls, setFileUrls] = useState<string[]>([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [likeLoading, setLikeLoading] = useState(false);
 
   useEffect(() => {
     if (!authLoading) {
       if (!isAuthenticated) {
-        window.location.href = '/login';
+        router.push('/login');
       } else if (postId) {
-        const loadPost = async () => {
+        const loadPostAndFiles = async () => {
           setLoading(true);
           try {
-            const data = await fetchPostDetail(postId as string);
-            setPost(data);
+            const postData = await fetchPostDetail(postId as string);
+            setPost(postData);
+
+            const filesData = await fetchFiles(postId as string);
+            setFileUrls(filesData.map((f: any) => f.fileUrl));
+
           } catch (error) {
-            console.error("게시글 상세 조회 실패:", error);
+            console.error("게시글 또는 파일 조회 실패:", error);
             setPost(null);
+            setFileUrls([]);
           } finally {
             setLoading(false);
           }
         };
 
-        loadPost();
+        loadPostAndFiles();
       }
     }
-  }, [authLoading, isAuthenticated, postId]);
+  }, [authLoading, isAuthenticated, router, postId]);
 
   // 찜 등록/해제 기능
   const toggleLike = async () => {
@@ -124,7 +151,7 @@ export default function PatentDetailPage() {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center h-screen text-gray-500">
         <div className="flex flex-col items-center">
@@ -158,6 +185,35 @@ export default function PatentDetailPage() {
           
           {/* Patent Detail Card */}
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-8 shadow-xl">
+            {/* Image Slider */}
+            <div className="relative w-full h-64 mb-6 bg-gray-200 rounded-lg overflow-hidden">
+              {fileUrls.length > 0 ? (
+                <>
+                  <img src={fileUrls[currentImageIndex]} alt={`Patent image ${currentImageIndex + 1}`} className="w-full h-full object-cover" />
+                  {fileUrls.length > 1 && (
+                    <>
+                      <button 
+                        onClick={() => setCurrentImageIndex(prev => (prev === 0 ? fileUrls.length - 1 : prev - 1))}
+                        className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full"
+                      >
+                        &#10094;
+                      </button>
+                      <button 
+                        onClick={() => setCurrentImageIndex(prev => (prev === fileUrls.length - 1 ? 0 : prev + 1))}
+                        className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full"
+                      >
+                        &#10095;
+                      </button>
+                    </>
+                  )}
+                </>
+              ) : (
+                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                  <span className="text-gray-500">No Image</span>
+                </div>
+              )}
+            </div>
+
             <div className="flex flex-col md:flex-row items-start gap-6 mb-6">
               <div className={`${categoryStyle.bg} rounded-full w-16 h-16 flex items-center justify-center flex-shrink-0`}>
                 <span className={`${categoryStyle.text} text-2xl`}>{emojiMap[post.category] || '❓'}</span>
@@ -166,7 +222,7 @@ export default function PatentDetailPage() {
                 <h1 className="text-2xl font-bold text-[#1a365d] mb-2">{post.title}</h1>
                 <p className="text-gray-600 mb-4">{post.description}</p>
                 <div className="flex flex-wrap items-center gap-4">
-                  <span className="font-bold text-xl text-[#1a365d]">₩{post.price.toLocaleString()}</span>
+                  <span className="font-bold text-xl text-[#1a365d]">₩{post.price ? post.price.toLocaleString() : '가격 정보 없음'}</span>
                   <span className={`${post.status === '판매중' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-3 py-1 rounded-full text-sm`}>{post.status}</span>
                   <span className="text-gray-500">찜 수: {post.favoriteCnt}</span>
                   <span className="text-gray-500">소유자: {post.owner}</span>
