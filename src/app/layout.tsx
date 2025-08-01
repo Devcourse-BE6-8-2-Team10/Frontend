@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ChatProvider } from "@/contexts/ChatContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
@@ -22,25 +21,23 @@ export default function RootLayout({
     <html lang="ko">
       <body className={inter.className}>
         <AuthProvider>
-          <ChatProvider>
-            <div className="min-h-screen bg-gradient-to-b from-[#2a4fa2] via-[#1a365d] to-[#1a365d] flex flex-col">
-              {/* Header */}
-              <Header />
+          <div className="min-h-screen bg-gradient-to-b from-[#2a4fa2] via-[#1a365d] to-[#1a365d] flex flex-col">
+            {/* Header */}
+            <Header />
 
-              {/* Main Content */}
-              <main className="flex-grow">{children}</main>
+            {/* Main Content */}
+            <main className="flex-grow">{children}</main>
 
-              {/* Footer */}
-              <Footer />
+            {/* Footer */}
+            <Footer />
 
-              {/* Floating Action Button */}
-              <div className="fixed bottom-6 right-6">
-                <button className="bg-purple-600 hover:bg-purple-700 text-white w-14 h-14 rounded-full shadow-lg transition-colors flex items-center justify-center">
-                  <span className="text-xl">💬</span>
-                </button>
-              </div>
+            {/* Floating Action Button */}
+            <div className="fixed bottom-6 right-6">
+              <button className="bg-purple-600 hover:bg-purple-700 text-white w-14 h-14 rounded-full shadow-lg transition-colors flex items-center justify-center">
+                <span className="text-xl">💬</span>
+              </button>
             </div>
-          </ChatProvider>
+          </div>
         </AuthProvider>
       </body>
     </html>

@@ -3,313 +3,174 @@
 import React, {
   createContext,
   useContext,
-  useReducer,
+  useState,
   useEffect,
   useCallback,
   ReactNode,
 } from "react";
 import { ChatMessage, ChatRoom, webSocketService } from "../utils/websocket";
-import { chatAPI } from "../utils/apiClient";
+import { useAuth } from "./AuthContext";
 
 interface ChatState {
   rooms: ChatRoom[];
   currentRoom: ChatRoom | null;
   messages: ChatMessage[];
-  unreadCounts: { [roomId: string]: number };
   isConnected: boolean;
   isLoading: boolean;
   error: string | null;
 }
 
-type ChatAction =
-  | { type: "SET_ROOMS"; payload: ChatRoom[] }
-  | { type: "SET_CURRENT_ROOM"; payload: ChatRoom | null }
-  | { type: "ADD_MESSAGE"; payload: ChatMessage }
-  | { type: "SET_MESSAGES"; payload: ChatMessage[] }
-  | { type: "SET_UNREAD_COUNTS"; payload: { [roomId: string]: number } }
-  | { type: "SET_CONNECTION_STATUS"; payload: boolean }
-  | { type: "SET_LOADING"; payload: boolean }
-  | { type: "SET_ERROR"; payload: string | null }
-  | {
-      type: "UPDATE_ROOM_LAST_MESSAGE";
-      payload: { roomId: string; message: ChatMessage };
-    };
-
-const initialState: ChatState = {
-  rooms: [],
-  currentRoom: null,
-  messages: [],
-  unreadCounts: {},
-  isConnected: false,
-  isLoading: false,
-  error: null,
-};
-
-function chatReducer(state: ChatState, action: ChatAction): ChatState {
-  switch (action.type) {
-    case "SET_ROOMS":
-      return { ...state, rooms: action.payload };
-    case "SET_CURRENT_ROOM":
-      return { ...state, currentRoom: action.payload };
-    case "ADD_MESSAGE":
-      return {
-        ...state,
-        messages: [...state.messages, action.payload],
-      };
-    case "SET_MESSAGES":
-      return { ...state, messages: action.payload };
-    case "SET_UNREAD_COUNTS":
-      return { ...state, unreadCounts: action.payload };
-    case "SET_CONNECTION_STATUS":
-      return { ...state, isConnected: action.payload };
-    case "SET_LOADING":
-      return { ...state, isLoading: action.payload };
-    case "SET_ERROR":
-      return { ...state, error: action.payload };
-    case "UPDATE_ROOM_LAST_MESSAGE":
-      return {
-        ...state,
-        rooms: state.rooms.map((room) =>
-          room.id === action.payload.roomId
-            ? { ...room, lastMessage: action.payload.message }
-            : room
-        ),
-      };
-    default:
-      return state;
-  }
-}
-
 interface ChatContextType extends ChatState {
-  connect: () => Promise<void>;
-  disconnect: () => void;
-  loadRooms: () => Promise<void>;
-  selectRoom: (room: ChatRoom) => Promise<void>;
-  sendMessage: (content: string) => Promise<void>;
-  createRoom: (name: string, participants: string[]) => Promise<void>;
-  joinRoom: (roomId: string) => Promise<void>;
-  leaveRoom: (roomId: string) => Promise<void>;
-  loadChatHistory: (roomId: string) => Promise<void>;
-  markMessageAsRead: (messageId: string) => Promise<void>;
+  connectToChat: () => Promise<void>;
+  disconnectFromChat: () => void;
+  selectRoom: (room: ChatRoom) => void;
+  sendMessage: (content: string) => void;
+  createTestRoom: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(chatReducer, initialState);
+  const { user, isAuthenticated } = useAuth();
+  const [state, setState] = useState<ChatState>({
+    rooms: [],
+    currentRoom: null,
+    messages: [],
+    isConnected: false,
+    isLoading: false,
+    error: null,
+  });
 
   // WebSocket 연결
-  const connect = useCallback(async () => {
-    try {
-      dispatch({ type: "SET_LOADING", payload: true });
-      dispatch({ type: "SET_ERROR", payload: null });
-
-      const token = localStorage.getItem("accessToken");
-      await webSocketService.connect(token || undefined);
-
-      dispatch({ type: "SET_CONNECTION_STATUS", payload: true });
-
-      // 연결 후 채팅방 목록 로드
-      try {
-        const rooms = await chatAPI.getChatRooms();
-        dispatch({ type: "SET_ROOMS", payload: rooms });
-
-        // 읽지 않은 메시지 수 로드
-        const unreadCounts = await chatAPI.getAllUnreadMessageCount();
-        dispatch({ type: "SET_UNREAD_COUNTS", payload: unreadCounts });
-      } catch (error) {
-        dispatch({
-          type: "SET_ERROR",
-          payload:
-            error instanceof Error ? error.message : "채팅방 목록 로드 실패",
-        });
-      }
-    } catch (error) {
-      dispatch({
-        type: "SET_ERROR",
-        payload: error instanceof Error ? error.message : "연결 실패",
-      });
-    } finally {
-      dispatch({ type: "SET_LOADING", payload: false });
+  const connectToChat = useCallback(async () => {
+    if (!user || !isAuthenticated) {
+      setState(prev => ({ ...prev, error: "로그인이 필요합니다." }));
+      return;
     }
-  }, []);
+
+    try {
+      setState(prev => ({ ...prev, isLoading: true, error: null }));
+      
+      await webSocketService.connect(user.email);
+      
+      setState(prev => ({ 
+        ...prev, 
+        isConnected: true, 
+        isLoading: false,
+        // 테스트용 방 생성
+        rooms: [
+          {
+            id: "test-room-1",
+            name: "일반 채팅방",
+            participants: [user.email]
+          },
+          {
+            id: "test-room-2", 
+            name: "기술 논의",
+            participants: [user.email]
+          }
+        ]
+      }));
+      
+      console.log("채팅 연결 완료");
+    } catch (error) {
+      console.error("채팅 연결 실패:", error);
+      setState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : "연결 실패",
+        isLoading: false,
+        isConnected: false
+      }));
+    }
+  }, [user, isAuthenticated]);
 
   // WebSocket 연결 해제
-  const disconnect = () => {
+  const disconnectFromChat = useCallback(() => {
     webSocketService.disconnect();
-    dispatch({ type: "SET_CONNECTION_STATUS", payload: false });
-  };
-
-  // 채팅방 목록 로드
-  const loadRooms = useCallback(async () => {
-    try {
-      dispatch({ type: "SET_LOADING", payload: true });
-      const rooms = await chatAPI.getChatRooms();
-      dispatch({ type: "SET_ROOMS", payload: rooms });
-
-      // 읽지 않은 메시지 수 로드
-      const unreadCounts = await chatAPI.getAllUnreadMessageCount();
-      dispatch({ type: "SET_UNREAD_COUNTS", payload: unreadCounts });
-    } catch (error) {
-      dispatch({
-        type: "SET_ERROR",
-        payload:
-          error instanceof Error ? error.message : "채팅방 목록 로드 실패",
-      });
-    } finally {
-      dispatch({ type: "SET_LOADING", payload: false });
-    }
+    setState(prev => ({
+      ...prev,
+      isConnected: false,
+      currentRoom: null,
+      messages: []
+    }));
   }, []);
 
   // 채팅방 선택
-  const selectRoom = async (room: ChatRoom) => {
-    try {
-      dispatch({ type: "SET_CURRENT_ROOM", payload: room });
-      await loadChatHistory(room.id);
-
-      // 해당 채팅방 구독
-      if (state.isConnected) {
-        webSocketService.subscribeToChatRoom(room.id, (message) => {
-          dispatch({ type: "ADD_MESSAGE", payload: message });
-          dispatch({
-            type: "UPDATE_ROOM_LAST_MESSAGE",
-            payload: { roomId: room.id, message },
-          });
-        });
-      }
-    } catch (error) {
-      dispatch({
-        type: "SET_ERROR",
-        payload: error instanceof Error ? error.message : "채팅방 선택 실패",
-      });
+  const selectRoom = useCallback((room: ChatRoom) => {
+    if (!state.isConnected) {
+      console.error("WebSocket이 연결되지 않았습니다.");
+      return;
     }
-  };
+
+    // 이전 방 구독 해제
+    if (state.currentRoom) {
+      webSocketService.unsubscribeFromChatRoom(state.currentRoom.id);
+    }
+
+    // 새 방 구독
+    webSocketService.subscribeToChatRoom(room.id, (message) => {
+      setState(prev => ({
+        ...prev,
+        messages: [...prev.messages, message]
+      }));
+    });
+
+    setState(prev => ({
+      ...prev,
+      currentRoom: room,
+      messages: [] // 새 방 선택시 메시지 초기화
+    }));
+
+    console.log(`방 선택: ${room.name}`);
+  }, [state.isConnected, state.currentRoom]);
 
   // 메시지 전송
-  const sendMessage = async (content: string) => {
-    if (!state.currentRoom) return;
-
-    try {
-      const userData = JSON.parse(localStorage.getItem("userData") || "{}");
-      const message: Omit<ChatMessage, "id" | "timestamp"> = {
-        senderId: userData.id,
-        senderName: userData.name || userData.username,
-        content,
-        roomId: state.currentRoom.id,
-      };
-
-      webSocketService.sendMessage(state.currentRoom.id, message);
-    } catch (error) {
-      dispatch({
-        type: "SET_ERROR",
-        payload: error instanceof Error ? error.message : "메시지 전송 실패",
-      });
+  const sendMessage = useCallback((content: string) => {
+    if (!user || !state.currentRoom || !state.isConnected) {
+      console.error("메시지 전송 조건이 맞지 않습니다.");
+      return;
     }
-  };
 
-  // 채팅방 생성
-  const createRoom = async (name: string, participants: string[]) => {
-    try {
-      dispatch({ type: "SET_LOADING", payload: true });
-      const newRoom = await chatAPI.createChatRoom({ name, participants });
-      dispatch({ type: "SET_ROOMS", payload: [...state.rooms, newRoom] });
-    } catch (error) {
-      dispatch({
-        type: "SET_ERROR",
-        payload: error instanceof Error ? error.message : "채팅방 생성 실패",
-      });
-    } finally {
-      dispatch({ type: "SET_LOADING", payload: false });
-    }
-  };
+    const message: Omit<ChatMessage, "id" | "timestamp"> = {
+      senderId: user.id,
+      senderName: user.name,
+      content,
+      roomId: state.currentRoom.id,
+    };
 
-  // 채팅방 참여
-  const joinRoom = async (roomId: string) => {
-    try {
-      await chatAPI.joinChatRoom(roomId);
-      await loadRooms(); // 목록 새로고침
-    } catch (error) {
-      dispatch({
-        type: "SET_ERROR",
-        payload: error instanceof Error ? error.message : "채팅방 참여 실패",
-      });
-    }
-  };
+    webSocketService.sendMessage(state.currentRoom.id, message);
+  }, [user, state.currentRoom, state.isConnected]);
 
-  // 채팅방 나가기
-  const leaveRoom = async (roomId: string) => {
-    try {
-      await chatAPI.leaveChatRoom(roomId);
-      await loadRooms(); // 목록 새로고침
+  // 테스트용 방 생성
+  const createTestRoom = useCallback(() => {
+    if (!user) return;
+    
+    const newRoom: ChatRoom = {
+      id: `test-room-${Date.now()}`,
+      name: `새 채팅방 ${new Date().toLocaleTimeString()}`,
+      participants: [user.email]
+    };
 
-      // 현재 채팅방이면 선택 해제
-      if (state.currentRoom?.id === roomId) {
-        dispatch({ type: "SET_CURRENT_ROOM", payload: null });
-        dispatch({ type: "SET_MESSAGES", payload: [] });
-      }
-    } catch (error) {
-      dispatch({
-        type: "SET_ERROR",
-        payload: error instanceof Error ? error.message : "채팅방 나가기 실패",
-      });
-    }
-  };
-
-  // 채팅 히스토리 로드
-  const loadChatHistory = async (roomId: string) => {
-    try {
-      dispatch({ type: "SET_LOADING", payload: true });
-      const { messages } = await chatAPI.getChatHistory(roomId);
-      dispatch({ type: "SET_MESSAGES", payload: messages });
-    } catch (error) {
-      dispatch({
-        type: "SET_ERROR",
-        payload:
-          error instanceof Error ? error.message : "채팅 히스토리 로드 실패",
-      });
-    } finally {
-      dispatch({ type: "SET_LOADING", payload: false });
-    }
-  };
-
-  // 메시지 읽음 처리
-  const markMessageAsRead = async (messageId: string) => {
-    if (!state.currentRoom) return;
-
-    try {
-      await chatAPI.markMessageAsRead(state.currentRoom.id, messageId);
-      // 읽지 않은 메시지 수 업데이트
-      const unreadCount = await chatAPI.getUnreadMessageCount(
-        state.currentRoom.id
-      );
-      dispatch({
-        type: "SET_UNREAD_COUNTS",
-        payload: { ...state.unreadCounts, [state.currentRoom.id]: unreadCount },
-      });
-    } catch (error) {
-      console.error("메시지 읽음 처리 실패:", error);
-    }
-  };
+    setState(prev => ({
+      ...prev,
+      rooms: [...prev.rooms, newRoom]
+    }));
+  }, [user]);
 
   // 컴포넌트 언마운트 시 연결 해제
   useEffect(() => {
     return () => {
-      disconnect();
+      disconnectFromChat();
     };
-  }, []);
+  }, [disconnectFromChat]);
 
   const value: ChatContextType = {
     ...state,
-    connect,
-    disconnect,
-    loadRooms,
+    connectToChat,
+    disconnectFromChat,
     selectRoom,
     sendMessage,
-    createRoom,
-    joinRoom,
-    leaveRoom,
-    loadChatHistory,
-    markMessageAsRead,
+    createTestRoom,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

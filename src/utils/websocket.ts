@@ -21,25 +21,20 @@ class WebSocketService {
   private client: Client | null = null;
   private subscriptions: Map<string, StompSubscription> = new Map();
   private isConnected: boolean = false;
-  private reconnectAttempts: number = 0;
-  private maxReconnectAttempts: number = 5;
-  private reconnectDelay: number = 3000;
 
-  // WebSocket 서버 URL 설정 (환경변수에서 가져오거나 기본값 사용)
-  private getWebSocketUrl(): string {
-    return process.env.NEXT_PUBLIC_WEBSOCKET_URL || "http://localhost:8080/ws";
-  }
-
-  // 연결 초기화
-  public connect(token?: string): Promise<void> {
+  // WebSocket 연결
+  public connect(userEmail: string): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
+        console.log("WebSocket 연결 시도...");
+        
         this.client = new Client({
-          webSocketFactory: () => new SockJS(this.getWebSocketUrl()),
-          connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
-          debug:
-            process.env.NODE_ENV === "development" ? console.log : undefined,
-          reconnectDelay: 0, // 재연결 비활성화
+          webSocketFactory: () => new SockJS("http://localhost:8080/chat"),
+          connectHeaders: {
+            "user-email": userEmail
+          },
+          debug: process.env.NODE_ENV === "development" ? console.log : undefined,
+          reconnectDelay: 0,
           heartbeatIncoming: 4000,
           heartbeatOutgoing: 4000,
         });
@@ -47,7 +42,6 @@ class WebSocketService {
         this.client.onConnect = () => {
           console.log("WebSocket 연결 성공");
           this.isConnected = true;
-          this.reconnectAttempts = 0;
           resolve();
         };
 
@@ -69,6 +63,7 @@ class WebSocketService {
 
         this.client.activate();
       } catch (error) {
+        console.error("WebSocket 연결 중 에러:", error);
         reject(error);
       }
     });
@@ -93,8 +88,12 @@ class WebSocketService {
     onMessage: (message: ChatMessage) => void
   ): void {
     if (!this.client || !this.isConnected) {
-      throw new Error("WebSocket이 연결되지 않았습니다.");
+      console.error("WebSocket이 연결되지 않았습니다.");
+      return;
     }
+
+    // 기존 구독이 있으면 해제
+    this.unsubscribeFromChatRoom(roomId);
 
     const subscription = this.client.subscribe(
       `/topic/chat/${roomId}`,
@@ -109,6 +108,7 @@ class WebSocketService {
     );
 
     this.subscriptions.set(roomId, subscription);
+    console.log(`채팅방 ${roomId} 구독 완료`);
   }
 
   // 채팅방 구독 해제
@@ -117,6 +117,7 @@ class WebSocketService {
     if (subscription) {
       subscription.unsubscribe();
       this.subscriptions.delete(roomId);
+      console.log(`채팅방 ${roomId} 구독 해제`);
     }
   }
 
@@ -126,66 +127,21 @@ class WebSocketService {
     message: Omit<ChatMessage, "id" | "timestamp">
   ): void {
     if (!this.client || !this.isConnected) {
-      throw new Error("WebSocket이 연결되지 않았습니다.");
+      console.error("WebSocket이 연결되지 않았습니다.");
+      return;
     }
 
     this.client.publish({
       destination: `/app/chat/${roomId}`,
       body: JSON.stringify(message),
     });
+    
+    console.log("메시지 전송:", message);
   }
 
   // 연결 상태 확인
   public isWebSocketConnected(): boolean {
     return this.isConnected;
-  }
-
-  // 개인 메시지 구독 (1:1 채팅용)
-  public subscribeToPrivateMessages(
-    userId: string,
-    onMessage: (message: ChatMessage) => void
-  ): void {
-    if (!this.client || !this.isConnected) {
-      throw new Error("WebSocket이 연결되지 않았습니다.");
-    }
-
-    const subscription = this.client.subscribe(
-      `/user/${userId}/queue/messages`,
-      (message) => {
-        try {
-          const chatMessage: ChatMessage = JSON.parse(message.body);
-          onMessage(chatMessage);
-        } catch (error) {
-          console.error("개인 메시지 파싱 에러:", error);
-        }
-      }
-    );
-
-    this.subscriptions.set(`private-${userId}`, subscription);
-  }
-
-  // 채팅방 참여 알림 구독
-  public subscribeToRoomNotifications(
-    roomId: string,
-    onNotification: (notification: unknown) => void
-  ): void {
-    if (!this.client || !this.isConnected) {
-      throw new Error("WebSocket이 연결되지 않았습니다.");
-    }
-
-    const subscription = this.client.subscribe(
-      `/topic/room/${roomId}/notifications`,
-      (message) => {
-        try {
-          const notification = JSON.parse(message.body);
-          onNotification(notification);
-        } catch (error) {
-          console.error("알림 파싱 에러:", error);
-        }
-      }
-    );
-
-    this.subscriptions.set(`notification-${roomId}`, subscription);
   }
 }
 
