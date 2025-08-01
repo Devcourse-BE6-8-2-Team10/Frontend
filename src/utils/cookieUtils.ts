@@ -1,9 +1,9 @@
 // 쿠키 관리를 위한 유틸리티 함수들 (AccessToken과 RefreshToken)
 
 // 쿠키 설정
-export const setCookie = (name: string, value: string, days: number = 7) => {
+export const setCookie = (name: string, value: string, minutes: number = 60 * 24 * 7) => {
   const expires = new Date();
-  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+  expires.setTime(expires.getTime() + minutes * 60 * 1000);
   const cookieValue = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Strict`;
   document.cookie = cookieValue;
 };
@@ -27,7 +27,7 @@ export const deleteCookie = (name: string) => {
 
 // AccessToken 쿠키 설정
 export const setAccessTokenCookie = (token: string) => {
-  setCookie('accessToken', token, 1); // 1일
+  setCookie('accessToken', token, 30); // 30분
 };
 
 // AccessToken 쿠키 가져오기
@@ -42,7 +42,7 @@ export const clearAccessTokenCookie = () => {
 
 // RefreshToken 쿠키 설정
 export const setRefreshTokenCookie = (token: string) => {
-  setCookie('refreshToken', token, 7); // 7일
+  setCookie('refreshToken', token, 60 * 24 * 7); // 7일
 };
 
 // RefreshToken 쿠키 가져오기
