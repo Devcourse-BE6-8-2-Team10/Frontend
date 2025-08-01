@@ -72,8 +72,13 @@ const fetchPostDetail = async (postId: string) => {
 };
 
 const fetchFiles = async (postId: string) => {
-  const response = await apiClient.get(`/api/posts/${postId}/files`);
-  return response.data.data || [];
+  try {
+    const response = await apiClient.get(`/api/posts/${postId}/files`);
+    return response.data.data || [];
+  } catch (error) {
+    console.error(`Failed to fetch files for post ${postId}:`, error);
+    return [];
+  }
 };
 
 export default function PatentDetailPage() {
