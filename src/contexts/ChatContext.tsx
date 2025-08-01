@@ -60,6 +60,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       console.log("토큰 존재 여부:", !!token);
       console.log("토큰 앞 20자:", token ? token.substring(0, 20) + "..." : "없음");
       console.log("사용자 정보:", user);
+      console.log("전체 쿠키 문자열:", document.cookie);
+      console.log("accessToken 쿠키 직접 확인:", document.cookie.includes('accessToken'));
+
+      // 모든 쿠키 파싱해서 보기
+      const allCookies = document.cookie.split(';').reduce((cookies, cookie) => {
+        const [name, value] = cookie.split('=').map(c => c.trim());
+        cookies[name] = value;
+        return cookies;
+      }, {} as Record<string, string>);
+      console.log("파싱된 모든 쿠키:", allCookies);
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',

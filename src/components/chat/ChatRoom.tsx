@@ -129,7 +129,7 @@ export default function ChatRoom() {
             <button
               onClick={() => {
                 const testRoom = {
-                  id: "2",
+                  id: 2,
                   name: "구매자-판매자 채팅",
                   participants: [user.email, "seller@test.com"]
                 };
