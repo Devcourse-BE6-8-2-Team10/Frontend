@@ -4,6 +4,7 @@ import axios, {
   AxiosError,
 } from "axios";
 import { ChatMessage, ChatRoom } from "./websocket";
+import { getAccessTokenCookie, clearAccessTokenCookie, clearRefreshTokenCookie } from './cookieUtils';
 
 // axios 인스턴스 생성
 const apiClient = axios.create({
@@ -13,9 +14,9 @@ const apiClient = axios.create({
   },
 });
 
-// 요청 인터셉터 - 자동으로 토큰 추가
+// 요청 인터셉터 - 자동으로 AccessToken 추가 (쿠키에서 읽어옴)
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = localStorage.getItem("accessToken");
+  const token = getAccessTokenCookie();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -24,20 +25,20 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 
 // 응답 인터셉터 - 에러 처리
 apiClient.interceptors.response.use(
-  (response: AxiosResponse) => response,
-  (error: AxiosError) => {
-    // 401/403 에러 시 자동 로그아웃 처리
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userData");
-      // 현재 경로가 로그인 페이지가 아닌 경우에만 리다이렉트
-      if (!window.location.pathname.includes("/login")) {
-        window.location.href = "/login";
+    (response: AxiosResponse) => response,
+    (error: AxiosError) => {
+      // 401/403 에러 시 자동 로그아웃 처리
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        clearAccessTokenCookie();
+        clearRefreshTokenCookie();
+        // 현재 경로가 로그인 페이지가 아닌 경우에만 리다이렉트
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
       }
+      return Promise.reject(error);
     }
-    return Promise.reject(error);
-  }
-);
+  );
 
 // 채팅 관련 API 함수들
 export const chatAPI = {

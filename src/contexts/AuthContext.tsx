@@ -2,6 +2,14 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import apiClient from '@/utils/apiClient';
+import { 
+  getRefreshTokenCookie, 
+  setRefreshTokenCookie, 
+  clearRefreshTokenCookie,
+  getAccessTokenCookie,
+  setAccessTokenCookie,
+  clearAccessTokenCookie
+} from '@/utils/cookieUtils';
 
 interface User {
   id: string;
@@ -13,10 +21,10 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (userData: User, token: string) => void;
+  login: (userData: User, accessToken: string, refreshToken: string) => void;
   logout: () => void;
   loading: boolean;
-  accessToken: string | null; // accessToken 추가
+  accessToken: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -68,89 +76,108 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           name: response.data.data.name,
         };
         
-        // 서버 데이터로 localStorage 업데이트
-        localStorage.setItem('userData', JSON.stringify(userData));
         return userData;
       }
       return null;
-    } catch (error) {
+    } catch (error: any) {
+      // 401/403 오류는 정상적인 상황 (로그인되지 않은 상태)
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        console.log('User not authenticated');
+        return null;
+      }
       console.error('Failed to fetch user info:', error);
       return null;
     }
   };
 
-  useEffect(() => {
-    // 페이지 로드 시 localStorage에서 인증 정보 복원
-    const userDataStr = localStorage.getItem('userData');
-    const storedAccessToken = localStorage.getItem('accessToken');
-    
-    if (userDataStr && storedAccessToken) {
-      try {
-        const userData = JSON.parse(userDataStr);
+  // 토큰 갱신 함수
+  const refreshAccessToken = async (refreshToken: string): Promise<string | null> => {
+    try {
+      const response = await apiClient.post('/api/auth/reissue', {
+        refreshToken: refreshToken
+      });
+      
+      if (response.data.data) {
+        const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data.data;
         
-        // 토큰 만료 확인
-        if (!isTokenExpired(storedAccessToken)) {
-          setAccessToken(storedAccessToken);
-          
-          // 서버에서 최신 사용자 정보 가져오기 (백그라운드)
-          fetchUserInfo().then(serverUserData => {
-            if (serverUserData) {
-              // 서버 데이터가 있으면 서버 데이터 사용
-              setUser(serverUserData);
-            } else {
-              // 서버에서 정보를 가져올 수 없으면 localStorage 데이터 사용
+        // 새로운 토큰들을 쿠키에 저장
+        setAccessTokenCookie(newAccessToken);
+        setRefreshTokenCookie(newRefreshToken);
+        
+        return newAccessToken;
+      }
+      return null;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    // 페이지 로드 시 인증 상태 확인
+    const checkAuthStatus = async () => {
+      try {
+        const storedAccessToken = getAccessTokenCookie();
+        const storedRefreshToken = getRefreshTokenCookie();
+        
+        if (storedAccessToken) {
+          // AccessToken 만료 확인
+          if (!isTokenExpired(storedAccessToken)) {
+            setAccessToken(storedAccessToken);
+            
+            // 서버에서 사용자 정보 가져오기
+            const userData = await fetchUserInfo();
+            if (userData) {
               setUser(userData);
             }
-          });
-        } else {
-          // 토큰이 만료된 경우 데이터 정리
-          clearAuthData();
+          } else if (storedRefreshToken) {
+            // AccessToken이 만료되었지만 RefreshToken이 있는 경우 갱신 시도
+            const newAccessToken = await refreshAccessToken(storedRefreshToken);
+            if (newAccessToken) {
+              setAccessToken(newAccessToken);
+              const userData = await fetchUserInfo();
+              if (userData) {
+                setUser(userData);
+              }
+            } else {
+              // 토큰 갱신 실패 시 데이터 정리
+              clearAuthData();
+            }
+          } else {
+            // 토큰이 만료되고 RefreshToken도 없는 경우 데이터 정리
+            clearAuthData();
+          }
         }
       } catch (error) {
-        console.error('Failed to parse user data from localStorage:', error);
-        clearAuthData();
-      }
-    }
-    setLoading(false);
-  }, []);
-
-  // 다른 탭에서 로그아웃 감지
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      // 다른 탭에서 userData나 accessToken이 삭제되면 현재 탭도 로그아웃
-      if ((e.key === 'userData' || e.key === 'accessToken') && e.newValue === null) {
-        console.log('다른 탭에서 로그아웃이 감지되어 현재 탭도 로그아웃 처리합니다.');
-        clearAuthData();
+        console.error('Auth check failed:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
+    checkAuthStatus();
   }, []);
-  
+
   // 인증 데이터 정리 함수
   const clearAuthData = () => {
     setUser(null);
     setAccessToken(null);
-    localStorage.removeItem('userData');
-    localStorage.removeItem('accessToken');
+    clearAccessTokenCookie();
+    clearRefreshTokenCookie();
   };
 
-  const login = (userData: User, token: string) => {
+  const login = (userData: User, accessToken: string, refreshToken: string) => {
     setUser(userData);
-    setAccessToken(token);
+    setAccessToken(accessToken);
     
-    // localStorage에 사용자 정보 저장
-    localStorage.setItem('userData', JSON.stringify(userData));
-    localStorage.setItem('accessToken', token);
+    // AccessToken과 RefreshToken을 쿠키에 저장 (자동 전송)
+    setAccessTokenCookie(accessToken);
+    setRefreshTokenCookie(refreshToken);
   };
 
   const logout = async () => {
     try {
-      // Backend에 로그아웃 요청
+      // Backend에 로그아웃 요청 (서버에서 쿠키 삭제)
       await apiClient.post('/api/auth/logout');
     } catch (error) {
       console.error('Logout API call failed:', error);
