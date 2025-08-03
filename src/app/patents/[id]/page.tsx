@@ -44,8 +44,8 @@ const categoryNameMap: { [key: string]: string } = {
 
 // 카테고리에 따른 이모지, 배경색, 텍스트색 매핑
 const emojiMap: { [key: string]: string } = {
-  PRODUCT: '💡',
-  METHOD: '🧠',
+  PRODUCT: '📦',
+  METHOD: '⚙️',
   USE: '🛠️',
   DESIGN: '🎨',
   TRADEMARK: '™️',

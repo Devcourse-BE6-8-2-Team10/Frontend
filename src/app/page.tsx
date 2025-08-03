@@ -2,12 +2,70 @@
 
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
+import { patentAPI } from "@/utils/apiClient";
+import apiClient from "@/utils/apiClient";
+
+// 특허 데이터 타입 정의
+interface Patent {
+  id: number;
+  title: string;
+  summary: string;
+  price: number;
+  status: string;
+  author: string;
+  category: string;
+  imageUrl?: string; // 이미지 URL 필드
+}
+
+// URL을 처리하는 헬퍼 함수
+const getFullImageUrl = (url?: string): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url; // 이미 절대 URL인 경우 그대로 반환
+  }
+  return `${apiClient.defaults.baseURL}${url}`; // 상대 URL인 경우 baseURL 추가
+};
 
 export default function Home() {
   const { user, isAuthenticated, loading } = useAuth();
+  const [popularPatents, setPopularPatents] = useState<Patent[]>([]);
+  const [recentPatents, setRecentPatents] = useState<Patent[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPatents = async () => {
+      try {
+        setDataLoading(true);
+        const [popularResponse, recentResponse] = await Promise.all([
+          patentAPI.getPopularPatents(),
+          patentAPI.getRecentPatents(),
+        ]);
+
+        // 백엔드에서 받은 데이터에 완전한 이미지 URL 생성
+        const processPatents = (patents: Patent[]) => {
+          return patents.map(p => ({
+            ...p,
+            imageUrl: getFullImageUrl(p.imageUrl)
+          }));
+        };
+
+        setPopularPatents(processPatents(popularResponse));
+        setRecentPatents(processPatents(recentResponse));
+
+      } catch (error) {
+        console.error("특허 정보를 불러오는 데 실패했습니다.", error);
+      } finally {
+        setDataLoading(false);
+      }
+    };
+
+    fetchPatents();
+  }, []);
+
 
   // 로딩 중일 때는 스켈레톤 UI 표시
-  if (loading) {
+  if (loading || dataLoading) {
     return (
       <>
         {/* Hero Section Skeleton */}
@@ -62,7 +120,7 @@ export default function Home() {
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="border border-gray-200 rounded-xl p-4 bg-white/50">
                     <div className="animate-pulse">
-                      <div className="w-10 h-10 bg-gray-300 rounded-full mb-3"></div>
+                      <div className="w-full h-32 bg-gray-300 rounded-lg mb-3"></div>
                       <div className="h-4 bg-gray-300 rounded mb-2"></div>
                       <div className="h-3 bg-gray-300 rounded mb-2"></div>
                       <div className="h-3 bg-gray-300 rounded mb-3"></div>
@@ -153,77 +211,30 @@ export default function Home() {
           </div>
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Patent Card 1 */}
-              <a href="/patents/1" className="border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1 bg-white/50">
-                <div className="bg-pink-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">
-                  <span className="text-pink-600 text-lg">🔊</span>
-                </div>
-                <h3 className="font-bold text-[#1a365d] mb-2 text-sm">AI 기반 음성인식 알고리즘 특허</h3>
-                <p className="text-gray-600 text-xs mb-3">혁신적인 음성인식 기술로 다양한 언어를 정확하게 인식합니다.</p>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-base text-[#1a365d]">₩15,000,000</span>
-                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">판매중</span>
-                </div>
-                <p className="text-gray-500 text-xs mb-3">김발명가</p>
-                <div className="flex gap-2">
-                  <button className="text-gray-400 hover:text-red-500 transition-colors text-sm">❤️</button>
-                  <button className="text-gray-400 hover:text-blue-500 transition-colors text-sm">📤</button>
-                </div>
-              </a>
-
-              {/* Patent Card 2 */}
-              <a href="/patents/2" className="border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1 bg-white/50">
-                <div className="bg-blue-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">
-                  <span className="text-blue-600 text-lg">🔋</span>
-                </div>
-                <h3 className="font-bold text-[#1a365d] mb-2 text-sm">차세대 배터리 기술 특허</h3>
-                <p className="text-gray-600 text-xs mb-3">고성능 리튬이온 배터리 기술로 에너지 효율성을 극대화합니다.</p>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-base text-[#1a365d]">₩25,000,000</span>
-                  <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">예약중</span>
-                </div>
-                <p className="text-gray-500 text-xs mb-3">박에너지</p>
-                <div className="flex gap-2">
-                  <button className="text-gray-400 hover:text-red-500 transition-colors text-sm">❤️</button>
-                  <button className="text-gray-400 hover:text-blue-500 transition-colors text-sm">📤</button>
-                </div>
-              </a>
-
-              {/* Patent Card 3 */}
-              <a href="/patents/3" className="border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1 bg-white/50">
-                <div className="bg-green-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">
-                  <span className="text-green-600 text-lg">🏥</span>
-                </div>
-                <h3 className="font-bold text-[#1a365d] mb-2 text-sm">원격 의료 진단 시스템 특허</h3>
-                <p className="text-gray-600 text-xs mb-3">AI 기반 원격 의료 진단으로 접근성을 높이는 혁신 기술입니다.</p>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-base text-[#1a365d]">₩18,500,000</span>
-                  <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs">판매완료</span>
-                </div>
-                <p className="text-gray-500 text-xs mb-3">이의료</p>
-                <div className="flex gap-2">
-                  <button className="text-gray-400 hover:text-red-500 transition-colors text-sm">❤️</button>
-                  <button className="text-gray-400 hover:text-blue-500 transition-colors text-sm">📤</button>
-                </div>
-              </a>
-
-              {/* Patent Card 4 */}
-              <a href="/patents/4" className="border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1 bg-white/50">
-                <div className="bg-purple-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">
-                  <span className="text-purple-600 text-lg">🌱</span>
-                </div>
-                <h3 className="font-bold text-[#1a365d] mb-2 text-sm">친환경 플라스틱 대체 기술</h3>
-                <p className="text-gray-600 text-xs mb-3">생분해성 소재로 환경오염을 줄이는 혁신적인 기술입니다.</p>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-base text-[#1a365d]">₩12,000,000</span>
-                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">판매중</span>
-                </div>
-                <p className="text-gray-500 text-xs mb-3">최환경</p>
-                <div className="flex gap-2">
-                  <button className="text-gray-400 hover:text-red-500 transition-colors text-sm">❤️</button>
-                  <button className="text-gray-400 hover:text-blue-500 transition-colors text-sm">📤</button>
-                </div>
-              </a>
+              {popularPatents.map((patent) => (
+                  <a key={patent.id} href={`/patents/${patent.id}`} className="border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1 bg-white/50 flex flex-col">
+                    <div className="w-full h-32 bg-gray-200 rounded-lg mb-3 overflow-hidden">
+                      {patent.imageUrl ? (
+                        <Image src={patent.imageUrl} alt={patent.title} width={300} height={200} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-500">No Image</div>
+                      )}
+                    </div>
+                    <div className="flex flex-col flex-grow">
+                      <h3 className="font-bold text-[#1a365d] mb-2 text-sm flex-grow">{patent.title}</h3>
+                      <p className="text-gray-600 text-xs mb-3">{patent.summary}</p>
+                      <div className="flex justify-between items-center mb-2 mt-auto">
+                        <span className="font-bold text-base text-[#1a365d]">₩{patent.price.toLocaleString()}</span>
+                        <span className={`bg-${patent.status === '판매중' ? 'green' : patent.status === '예약중' ? 'yellow' : 'red'}-100 text-${patent.status === '판매중' ? 'green' : patent.status === '예약중' ? 'yellow' : 'red'}-800 px-2 py-1 rounded-full text-xs`}>{patent.status}</span>
+                      </div>
+                      <p className="text-gray-500 text-xs mb-3">{patent.author}</p>
+                      <div className="flex gap-2">
+                        <button className="text-gray-400 hover:text-red-500 transition-colors text-sm">❤️</button>
+                        <button className="text-gray-400 hover:text-blue-500 transition-colors text-sm">📤</button>
+                      </div>
+                    </div>
+                  </a>
+              ))}
             </div>
           </div>
         </div>
@@ -241,41 +252,30 @@ export default function Home() {
           </div>
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Recent Patent Card 1 */}
-              <a href="/patents/5" className="border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1 bg-white/50">
-                <div className="bg-orange-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">
-                  <span className="text-orange-600 text-lg">🚗</span>
-                </div>
-                <h3 className="font-bold text-[#1a365d] mb-2 text-sm">자율주행 센서 융합 기술</h3>
-                <p className="text-gray-600 text-xs mb-3">다양한 센서를 융합하여 안전한 자율주행을 구현하는 기술입니다.</p>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-base text-[#1a365d]">₩30,000,000</span>
-                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">판매중</span>
-                </div>
-                <p className="text-gray-500 text-xs mb-3">정개발자</p>
-                <div className="flex gap-2">
-                  <button className="text-gray-400 hover:text-red-500 transition-colors text-sm">❤️</button>
-                  <button className="text-gray-400 hover:text-blue-500 transition-colors text-sm">📤</button>
-                </div>
-              </a>
-
-              {/* Recent Patent Card 2 */}
-              <a href="/patents/6" className="border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1 bg-white/50">
-                <div className="bg-indigo-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">
-                  <span className="text-indigo-600 text-lg">📱</span>
-                </div>
-                <h3 className="font-bold text-[#1a365d] mb-2 text-sm">스마트폰 보안 인증 기술</h3>
-                <p className="text-gray-600 text-xs mb-3">생체인식과 AI를 결합한 차세대 보안 인증 시스템입니다.</p>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-base text-[#1a365d]">₩8,900,000</span>
-                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">판매중</span>
-                </div>
-                <p className="text-gray-500 text-xs mb-3">한보안</p>
-                <div className="flex gap-2">
-                  <button className="text-gray-400 hover:text-red-500 transition-colors text-sm">❤️</button>
-                  <button className="text-gray-400 hover:text-blue-500 transition-colors text-sm">📤</button>
-                </div>
-              </a>
+            {recentPatents.map((patent) => (
+                <a key={patent.id} href={`/patents/${patent.id}`} className="border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1 bg-white/50 flex flex-col">
+                  <div className="w-full h-32 bg-gray-200 rounded-lg mb-3 overflow-hidden">
+                    {patent.imageUrl ? (
+                      <Image src={patent.imageUrl} alt={patent.title} width={300} height={200} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-500">No Image</div>
+                    )}
+                  </div>
+                  <div className="flex flex-col flex-grow">
+                    <h3 className="font-bold text-[#1a365d] mb-2 text-sm flex-grow">{patent.title}</h3>
+                    <p className="text-gray-600 text-xs mb-3">{patent.summary}</p>
+                    <div className="flex justify-between items-center mb-2 mt-auto">
+                      <span className="font-bold text-base text-[#1a365d]">₩{patent.price.toLocaleString()}</span>
+                      <span className={`bg-${patent.status === '판매중' ? 'green' : patent.status === '예약중' ? 'yellow' : 'red'}-100 text-${patent.status === '판매중' ? 'green' : patent.status === '예약중' ? 'yellow' : 'red'}-800 px-2 py-1 rounded-full text-xs`}>{patent.status}</span>
+                    </div>
+                    <p className="text-gray-500 text-xs mb-3">{patent.author}</p>
+                    <div className="flex gap-2">
+                      <button className="text-gray-400 hover:text-red-500 transition-colors text-sm">❤️</button>
+                      <button className="text-gray-400 hover:text-blue-500 transition-colors text-sm">📤</button>
+                    </div>
+                  </div>
+                </a>
+              ))}
             </div>
           </div>
         </div>
