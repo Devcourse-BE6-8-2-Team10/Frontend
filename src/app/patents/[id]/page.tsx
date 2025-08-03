@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import apiClient from "@/utils/apiClient";
-import { useAuth } from "@/contexts/AuthContext";
-import { useParams, useRouter } from "next/navigation";
+import React, { useState, useEffect } from 'react';
+import apiClient from '@/utils/apiClient';
+import { useAuth } from '@/contexts/AuthContext';
+import { useParams, useRouter } from 'next/navigation';
 
 // Post 상세 정보 타입 정의 (백엔드 PostDetailDTO.java 참고)
 interface PostDetail {
@@ -31,42 +31,49 @@ interface PostDetail {
 // 카테고리에 따른 이모지, 배경색, 텍스트색 매핑
 // Post.java의 Category enum 참고
 const emojiMap: { [key: string]: string } = {
-  "물건발명": "💡",
-  "방법발명": "🧠",
-  "용도발명": "🛠️",
-  "디자인권": "🎨",
-  "상표권": "™️",
-  "저작권": "📝",
-  "기타": "✨"
+  PRODUCT: '💡',
+  METHOD: '🧠',
+  USE: '🛠️',
+  DESIGN: '🎨',
+  TRADEMARK: '™️',
+  COPYRIGHT: '📝',
+  ETC: '✨',
 };
 
 const colorMap: { [key: string]: { bg: string; text: string } } = {
-  "물건발명": { bg: "bg-pink-100", text: "text-pink-600" },
-  "방법발명": { bg: "bg-blue-100", text: "text-blue-600" },
-  "용도발명": { bg: "bg-green-100", text: "text-green-600" },
-  "디자인권": { bg: "bg-purple-100", text: "text-purple-600" },
-  "상표권": { bg: "bg-orange-100", text: "text-orange-600" },
-  "저작권": { bg: "bg-indigo-100", text: "text-indigo-600" },
-  "기타": { bg: "bg-yellow-100", text: "text-yellow-600" },
+  PRODUCT: { bg: 'bg-pink-100', text: 'text-pink-600' },
+  METHOD: { bg: 'bg-blue-100', text: 'text-blue-600' },
+  USE: { bg: 'bg-green-100', text: 'text-green-600' },
+  DESIGN: { bg: 'bg-purple-100', text: 'text-purple-600' },
+  TRADEMARK: { bg: 'bg-orange-100', text: 'text-orange-600' },
+  COPYRIGHT: { bg: 'bg-indigo-100', text: 'text-indigo-600' },
+  ETC: { bg: 'bg-yellow-100', text: 'text-yellow-600' },
 };
 
 // API 호출 함수
 const fetchPostDetail = async (postId: string) => {
-  // 실제 백엔드 PostController.java의 GET /api/posts/{postId} 엔드포인트 호출
   const response = await apiClient.get(`/api/posts/${postId}`);
-  
+
   const postData = response.data.data;
-  // 백엔드에서 받은 데이터와 프론트엔드 예시 데이터를 조합
   return {
     ...postData,
-    owner: "김발명가", // TODO: 실제 사용자 정보로 교체 필요
-    patentNumber: `KR-2024-${String(postData.id).padStart(6, '0')}`, // 예시 데이터
-    applicationDate: postData.createdAt ? new Date(postData.createdAt).toLocaleDateString("ko-KR") : "N/A",
-    publicationDate: postData.createdAt ? new Date(postData.createdAt).toLocaleDateString("ko-KR") : "N/A",
-    registrationDate: postData.modifiedAt ? new Date(postData.modifiedAt).toLocaleDateString("ko-KR") : "N/A",
-    mainClass: "G10L 15/00", // 예시 데이터
-    subClass: "G10L 15/22", // 예시 데이터
-    techField: "AI/음성인식", // 예시 데이터
+    owner: '김발명가',
+    patentNumber: `KR-2024-${String(postData.id).padStart(6, '0')}`,
+    applicationDate:
+      postData.createdAt ?
+      new Date(postData.createdAt).toLocaleDateString('ko-KR') :
+      'N/A',
+    publicationDate:
+      postData.createdAt ?
+      new Date(postData.createdAt).toLocaleDateString('ko-KR') :
+      'N/A',
+    registrationDate:
+      postData.modifiedAt ?
+      new Date(postData.modifiedAt).toLocaleDateString('ko-KR') :
+      'N/A',
+    mainClass: 'G10L 15/00',
+    subClass: 'G10L 15/22',
+    techField: 'AI/음성인식',
     abstract: postData.description,
   };
 };
@@ -86,7 +93,7 @@ export default function PatentDetailPage() {
   const router = useRouter();
   const params = useParams();
   const postId = params.id;
-  
+
   const [post, setPost] = useState<any>(null);
   const [fileUrls, setFileUrls] = useState<string[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -105,10 +112,15 @@ export default function PatentDetailPage() {
             setPost(postData);
 
             const filesData = await fetchFiles(postId as string);
-            setFileUrls(filesData.map((f: any) => f.fileUrl));
-
+            const fullFileUrls = filesData.map((f: any) => {
+                if (f.fileUrl.startsWith('http')) {
+                    return f.fileUrl;
+                }
+                return `${apiClient.defaults.baseURL}${f.fileUrl}`;
+            });
+            setFileUrls(fullFileUrls);
           } catch (error) {
-            console.error("게시글 또는 파일 조회 실패:", error);
+            console.error('게시글 또는 파일 조회 실패:', error);
             setPost(null);
             setFileUrls([]);
           } finally {
@@ -124,7 +136,7 @@ export default function PatentDetailPage() {
   // 찜 등록/해제 기능
   const toggleLike = async () => {
     if (!isAuthenticated) {
-      alert("로그인이 필요합니다.");
+      alert('로그인이 필요합니다.');
       window.location.href = '/login';
       return;
     }
@@ -133,19 +145,21 @@ export default function PatentDetailPage() {
 
     try {
       const endpoint = `/api/posts/${post.id}/favorite`;
-      const response = post.isLiked
-        ? await apiClient.delete(endpoint)
-        : await apiClient.post(endpoint);
+      const response =
+        post.isLiked ?
+        await apiClient.delete(endpoint) :
+        await apiClient.post(endpoint);
 
       if (response.status === 200) {
         setPost((prevPost: any) => ({
           ...prevPost,
           isLiked: !prevPost.isLiked,
-          favoriteCnt: prevPost.isLiked ? prevPost.favoriteCnt - 1 : prevPost.favoriteCnt + 1
+          favoriteCnt:
+            prevPost.isLiked ? prevPost.favoriteCnt - 1 : prevPost.favoriteCnt + 1,
         }));
       }
     } catch (error) {
-      console.error("찜 토글 오류:", error);
+      console.error('찜 토글 오류:', error);
     } finally {
       setLikeLoading(false);
     }
@@ -161,7 +175,7 @@ export default function PatentDetailPage() {
       </div>
     );
   }
-  
+
   if (!post) {
     return (
       <div className="flex items-center justify-center h-screen text-gray-500">
@@ -170,7 +184,8 @@ export default function PatentDetailPage() {
     );
   }
 
-  const categoryStyle = colorMap[post.category] || { bg: "bg-gray-100", text: "text-gray-600" };
+  const categoryStyle =
+    colorMap[post.category] || { bg: 'bg-gray-100', text: 'text-gray-600' };
 
   return (
     <div className="pb-10">
@@ -178,28 +193,46 @@ export default function PatentDetailPage() {
         <div className="max-w-4xl mx-auto">
           {/* Breadcrumb */}
           <div className="text-gray-400 text-sm mb-6">
-            <a href="/" className="hover:text-gray-200">홈</a> &gt; 
-            <a href="/patents" className="hover:text-gray-200">특허목록</a> &gt; 
+            <a href="/" className="hover:text-gray-200">
+              홈
+            </a>
+            &gt;
+            <a href="/patents" className="hover:text-gray-200">
+              특허목록
+            </a>
+            &gt;
             <span>특허 상세</span>
           </div>
-          
+
           {/* Patent Detail Card */}
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-8 shadow-xl">
             {/* Image Slider */}
             <div className="relative w-full h-64 mb-6 bg-gray-200 rounded-lg overflow-hidden">
               {fileUrls.length > 0 ? (
                 <>
-                  <img src={fileUrls[currentImageIndex]} alt={`Patent image ${currentImageIndex + 1}`} className="w-full h-full object-cover" />
+                  <img
+                    src={fileUrls[currentImageIndex]}
+                    alt={`Patent image ${currentImageIndex + 1}`}
+                    className="w-full h-full object-cover"
+                  />
                   {fileUrls.length > 1 && (
                     <>
-                      <button 
-                        onClick={() => setCurrentImageIndex(prev => (prev === 0 ? fileUrls.length - 1 : prev - 1))}
+                      <button
+                        onClick={() =>
+                          setCurrentImageIndex((prev) =>
+                            prev === 0 ? fileUrls.length - 1 : prev - 1
+                          )
+                        }
                         className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full"
                       >
                         &#10094;
                       </button>
-                      <button 
-                        onClick={() => setCurrentImageIndex(prev => (prev === fileUrls.length - 1 ? 0 : prev + 1))}
+                      <button
+                        onClick={() =>
+                          setCurrentImageIndex((prev) =>
+                            prev === fileUrls.length - 1 ? 0 : prev + 1
+                          )
+                        }
                         className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full"
                       >
                         &#10095;
@@ -215,21 +248,42 @@ export default function PatentDetailPage() {
             </div>
 
             <div className="flex flex-col md:flex-row items-start gap-6 mb-6">
-              <div className={`${categoryStyle.bg} rounded-full w-16 h-16 flex items-center justify-center flex-shrink-0`}>
-                <span className={`${categoryStyle.text} text-2xl`}>{emojiMap[post.category] || '❓'}</span>
+              <div
+                className={`${categoryStyle.bg} rounded-full w-16 h-16 flex items-center justify-center flex-shrink-0`}
+              >
+                <span className={`${categoryStyle.text} text-2xl`}>
+                  {emojiMap[post.category] || '❓'}
+                </span>
               </div>
               <div className="flex-1">
-                <h1 className="text-2xl font-bold text-[#1a365d] mb-2">{post.title}</h1>
+                <h1 className="text-2xl font-bold text-[#1a365d] mb-2">
+                  {post.title}
+                </h1>
                 <p className="text-gray-600 mb-4">{post.description}</p>
                 <div className="flex flex-wrap items-center gap-4">
-                  <span className="font-bold text-xl text-[#1a365d]">₩{post.price ? post.price.toLocaleString() : '가격 정보 없음'}</span>
-                  <span className={`${post.status === '판매중' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-3 py-1 rounded-full text-sm`}>{post.status}</span>
-                  <span className="text-gray-500">찜 수: {post.favoriteCnt}</span>
+                  <span className="font-bold text-xl text-[#1a365d]">
+                    ₩
+                    {post.price ?
+                      post.price.toLocaleString() :
+                      '가격 정보 없음'}
+                  </span>
+                  <span
+                    className={`${
+                      post.status === 'SALE' ?
+                        'bg-green-100 text-green-800' :
+                        'bg-red-100 text-red-800'
+                    } px-3 py-1 rounded-full text-sm`}
+                  >
+                    {post.status}
+                  </span>
+                  <span className="text-gray-500">
+                    찜 수: {post.favoriteCnt}
+                  </span>
                   <span className="text-gray-500">소유자: {post.owner}</span>
                 </div>
               </div>
             </div>
-            
+
             {/* Patent Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
@@ -271,7 +325,7 @@ export default function PatentDetailPage() {
                 </div>
               </div>
             </div>
-            
+
             {/* Abstract */}
             <div className="mb-6">
               <h3 className="font-bold text-[#1a365d] mb-3">요약</h3>
@@ -279,13 +333,13 @@ export default function PatentDetailPage() {
                 {post.abstract}
               </p>
             </div>
-            
+
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
               <button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors flex-1">
                 구매 문의
               </button>
-              <button 
+              <button
                 className="border border-purple-600 text-purple-600 hover:bg-purple-600 hover:text-white px-6 py-3 rounded-lg transition-colors flex-1"
                 onClick={toggleLike}
                 disabled={likeLoading}
