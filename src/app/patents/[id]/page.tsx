@@ -14,7 +14,7 @@ interface FileUploadResponse {
   sortOrder: number;
 }
 
-// Post 상세 정보 타입 정의 (백엔드 PostDetailDTO.java 참고)
+// Post 상세 정보 타입 정의 (실제 API 응답 기준)
 interface PostDetail {
   id: number;
   title: string;
@@ -26,20 +26,23 @@ interface PostDetail {
   isLiked: boolean;
   createdAt: string;
   modifiedAt: string;
-  owner: string; // 예시 데이터, 실제로는 User 정보가 필요
-  patentNumber: string; // 예시 데이터
-  applicationDate: string;
-  publicationDate: string;
-  registrationDate: string;
-  mainClass: string; // 예시 데이터
-  subClass: string; // 예시 데이터
-  techField: string; // 예시 데이터
+  ownerName: string; // 작성자 이름 필드
   abstract: string;
-  files: FileUploadResponse[]; // 파일 목록 추가
+  files: FileUploadResponse[];
 }
 
+// 카테고리 영문 key를 한글로 변환하기 위한 맵
+const categoryNameMap: { [key: string]: string } = {
+  PRODUCT: '물건발명',
+  METHOD: '방법발명',
+  USE: '용도발명',
+  DESIGN: '디자인권',
+  TRADEMARK: '상표권',
+  COPYRIGHT: '저작권',
+  ETC: '기타',
+};
+
 // 카테고리에 따른 이모지, 배경색, 텍스트색 매핑
-// Post.java의 Category enum 참고
 const emojiMap: { [key: string]: string } = {
   PRODUCT: '💡',
   METHOD: '🧠',
@@ -70,23 +73,6 @@ const fetchPostDetail = async (postId: string) => {
 
   return {
     ...postData,
-    owner: '김발명가',
-    patentNumber: `KR-2024-${String(postData.id).padStart(6, '0')}`,
-    applicationDate:
-      postData.createdAt ?
-      new Date(postData.createdAt).toLocaleDateString('ko-KR') :
-      'N/A',
-    publicationDate:
-      postData.createdAt ?
-      new Date(postData.createdAt).toLocaleDateString('ko-KR') :
-      'N/A',
-    registrationDate:
-      postData.modifiedAt ?
-      new Date(postData.modifiedAt).toLocaleDateString('ko-KR') :
-      'N/A',
-    mainClass: 'G10L 15/00',
-    subClass: 'G10L 15/22',
-    techField: 'AI/음성인식',
     abstract: postData.description,
     files: filesData,
   };
@@ -108,7 +94,7 @@ export default function PatentDetailPage() {
   const params = useParams();
   const postId = params.id;
 
-  const [post, setPost] = useState<any>(null);
+  const [post, setPost] = useState<PostDetail | null>(null);
   const [fileUrls, setFileUrls] = useState<string[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -165,12 +151,17 @@ export default function PatentDetailPage() {
         await apiClient.post(endpoint);
 
       if (response.status === 200) {
-        setPost((prevPost: any) => ({
-          ...prevPost,
-          isLiked: !prevPost.isLiked,
-          favoriteCnt:
-            prevPost.isLiked ? prevPost.favoriteCnt - 1 : prevPost.favoriteCnt + 1,
-        }));
+        setPost((prevPost) =>
+          prevPost
+            ? {
+                ...prevPost,
+                isLiked: !prevPost.isLiked,
+                favoriteCnt: prevPost.isLiked
+                  ? prevPost.favoriteCnt - 1
+                  : prevPost.favoriteCnt + 1,
+              }
+            : null
+        );
       }
     } catch (error) {
       console.error('찜 토글 오류:', error);
@@ -273,8 +264,7 @@ export default function PatentDetailPage() {
                 <h1 className="text-2xl font-bold text-[#1a365d] mb-2">
                   {post.title}
                 </h1>
-                <p className="text-gray-600 mb-4">{post.description}</p>
-                <div className="flex flex-wrap items-center gap-4">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
                   <span className="font-bold text-xl text-[#1a365d]">
                     ₩
                     {post.price ?
@@ -286,63 +276,26 @@ export default function PatentDetailPage() {
                       post.status === 'SALE' ?
                         'bg-green-100 text-green-800' :
                         'bg-red-100 text-red-800'
-                    } px-3 py-1 rounded-full text-sm`}
+                    } px-3 py-1 rounded-full`}
                   >
                     {post.status}
                   </span>
                   <span className="text-gray-500">
-                    찜 수: {post.favoriteCnt}
+                    찜: {post.favoriteCnt}
                   </span>
-                  <span className="text-gray-500">소유자: {post.owner}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Patent Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <h3 className="font-bold text-[#1a365d] mb-3">특허 정보</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">특허번호:</span>
-                    <span>{post.patentNumber}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">출원일:</span>
-                    <span>{post.applicationDate}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">공개일:</span>
-                    <span>{post.publicationDate}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">등록일:</span>
-                    <span>{post.registrationDate}</span>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <h3 className="font-bold text-[#1a365d] mb-3">기술 분야</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">주분류:</span>
-                    <span>{post.mainClass}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">부분류:</span>
-                    <span>{post.subClass}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">기술분야:</span>
-                    <span>{post.techField}</span>
-                  </div>
+                   <span className="text-gray-500">
+                    작성자: {post.ownerName || '정보 없음'}
+                  </span>
+                  <span className="text-gray-500">
+                    기술분야: {categoryNameMap[post.category] || post.category}
+                  </span>
                 </div>
               </div>
             </div>
 
             {/* Abstract */}
             <div className="mb-6">
-              <h3 className="font-bold text-[#1a365d] mb-3">요약</h3>
+              <h3 className="font-bold text-[#1a365d] mb-3">내용</h3>
               <p className="text-gray-700 leading-relaxed">
                 {post.abstract}
               </p>
