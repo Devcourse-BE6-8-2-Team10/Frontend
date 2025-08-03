@@ -1,9 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import apiClient from '@/utils/apiClient';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 export default function PatentRegisterPage() {
+  const { isAuthenticated, loading } = useAuth();
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     title: '',
@@ -12,17 +16,54 @@ export default function PatentRegisterPage() {
     price: 0,
   });
   const [files, setFiles] = useState<File[]>([]);
-
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<{ [key: string]: boolean }>({});
+  const [shakeErrors, setShakeErrors] = useState<{ [key: string]: boolean }>({});
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, loading, router]);
+
+  if (loading || !isAuthenticated) {
+    return (
+      <div className="pb-10">
+        <section className="px-6 py-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">로딩 중...</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === 'price' ? (parseInt(value) || 0) : value,
-    }));
+    // 해당 필드의 에러 상태 및 흔들림 상태 초기화
+    setValidationErrors((prev) => ({ ...prev, [name]: false }));
+    setShakeErrors((prev) => ({ ...prev, [name]: false }));
+
+    if (name === 'price') {
+      const rawValue = value.replace(/,/g, ''); // 쉼표 제거
+      const parsedValue = parseInt(rawValue) || 0;
+      setFormData((prev) => ({
+        ...prev,
+        [name]: parsedValue,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,12 +72,16 @@ export default function PatentRegisterPage() {
     }
   };
 
+  const handleRemoveFile = (indexToRemove: number) => {
+    setFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
       const postResponse = await apiClient.post('/api/posts', formData);
-      const postId = postResponse.data?.data?.id || postResponse.data?.postId;
+      const postId = postResponse.data.id;
 
       if (!postId) {
         throw new Error('특허 등록에 실패했습니다.');
@@ -166,7 +211,7 @@ export default function PatentRegisterPage() {
                     value={formData.title}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-3 py-2 border ${validationErrors.title ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${shakeErrors.title ? 'animate-shake' : ''}`}
                     placeholder="제목을 입력하세요"
                   />
                 </div>
@@ -180,7 +225,7 @@ export default function PatentRegisterPage() {
                     value={formData.category}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-3 py-2 border ${validationErrors.category ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${shakeErrors.category ? 'animate-shake' : ''}`}
                   >
                     <option value="">기술분야를 선택하세요</option>
                     <option value="PRODUCT">물건발명</option>
@@ -203,7 +248,7 @@ export default function PatentRegisterPage() {
                     onChange={handleChange}
                     required
                     rows={10}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-3 py-2 border ${validationErrors.description ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${shakeErrors.description ? 'animate-shake' : ''}`}
                     placeholder="내용을 입력하세요"
                   />
                 </div>
@@ -213,12 +258,22 @@ export default function PatentRegisterPage() {
                     가격 <span className="text-red-500">*</span>
                   </label>
                   <input
-                    type="number"
+                    type="text"
                     name="price"
-                    value={formData.price}
+                    value={formData.price === 0 ? '' : formData.price.toLocaleString()}
                     onChange={handleChange}
+                    onFocus={(e) => {
+                      // 포커스 시 쉼표 제거된 숫자 표시
+                      e.target.value = formData.price === 0 ? '' : formData.price.toString();
+                    }}
+                    onBlur={(e) => {
+                      // 포커스 아웃 시 쉼표 추가된 숫자 표시
+                      const value = parseInt(e.target.value.replace(/,/g, '')) || 0;
+                      e.target.value = value === 0 ? '' : value.toLocaleString();
+                      setFormData((prev) => ({ ...prev, price: value }));
+                    }}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-3 py-2 border ${validationErrors.price ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${shakeErrors.price ? 'animate-shake' : ''}`}
                     placeholder="가격을 입력하세요"
                   />
                 </div>
@@ -226,7 +281,45 @@ export default function PatentRegisterPage() {
                 <div className="flex justify-end">
                   <button
                     type="button"
-                    onClick={() => setStep(2)}
+                    onClick={() => {
+                      const errors: { [key: string]: boolean } = {};
+                      const shake: { [key: string]: boolean } = {};
+                      let isValid = true;
+
+                      if (!formData.title) {
+                        errors.title = true;
+                        shake.title = true;
+                        isValid = false;
+                      }
+                      if (!formData.category) {
+                        errors.category = true;
+                        shake.category = true;
+                        isValid = false;
+                      }
+                      if (!formData.description) {
+                        errors.description = true;
+                        shake.description = true;
+                        isValid = false;
+                      }
+                      if (formData.price <= 0) {
+                        errors.price = true;
+                        shake.price = true;
+                        isValid = false;
+                      }
+
+                      setValidationErrors(errors); // 에러 상태 업데이트
+                      setShakeErrors(shake); // 흔들림 상태 업데이트
+
+                      if (isValid) {
+                        setStep(2);
+                      } else {
+                        alert('필수 입력 항목을 모두 채워주세요.'); // 한 번만 알림
+                        // 짧은 시간 후 흔들림 상태 초기화
+                        setTimeout(() => {
+                          setShakeErrors({});
+                        }, 500); // 0.5초 후 초기화
+                      }
+                    }}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
                   >
                     다음
@@ -257,6 +350,33 @@ export default function PatentRegisterPage() {
                       여러 파일을 선택할 수 있습니다.
                     </p>
                   </div>
+
+                  {files.length > 0 && (
+                    <div className="mt-4">
+                      <h3 className="text-md font-semibold text-gray-800 mb-2">
+                        선택된 파일 ({files.length}개)
+                      </h3>
+                      <ul className="border border-gray-300 rounded-lg p-4 space-y-2">
+                        {files.map((file, index) => (
+                          <li
+                            key={index}
+                            className="flex items-center justify-between bg-gray-50 p-2 rounded-md"
+                          >
+                            <span className="text-gray-700 text-sm">
+                              {file.name} ({(file.size / 1024).toFixed(2)} KB)
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveFile(index)}
+                              className="text-red-500 hover:text-red-700 ml-4"
+                            >
+                              X
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-between">

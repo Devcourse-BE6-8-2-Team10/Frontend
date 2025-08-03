@@ -69,6 +69,9 @@ const Header = () => {
           {isAuthenticated ? (
             // 로그인 후 메뉴
             <>
+              <Link href="/patents/register" className="hover:text-gray-300 transition-colors">
+                특허등록
+              </Link>
               <Link href="/chat" className="hover:text-gray-300 transition-colors">
                 채팅
               </Link>

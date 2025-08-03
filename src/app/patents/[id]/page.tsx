@@ -5,6 +5,15 @@ import apiClient from '@/utils/apiClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { useParams, useRouter } from 'next/navigation';
 
+interface FileUploadResponse {
+  id: number;
+  fileUrl: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  sortOrder: number;
+}
+
 // Post 상세 정보 타입 정의 (백엔드 PostDetailDTO.java 참고)
 interface PostDetail {
   id: number;
@@ -26,6 +35,7 @@ interface PostDetail {
   subClass: string; // 예시 데이터
   techField: string; // 예시 데이터
   abstract: string;
+  files: FileUploadResponse[]; // 파일 목록 추가
 }
 
 // 카테고리에 따른 이모지, 배경색, 텍스트색 매핑
@@ -53,8 +63,11 @@ const colorMap: { [key: string]: { bg: string; text: string } } = {
 // API 호출 함수
 const fetchPostDetail = async (postId: string) => {
   const response = await apiClient.get(`/api/posts/${postId}`);
+  const filesResponse = await apiClient.get(`/api/posts/${postId}/files`);
 
   const postData = response.data.data;
+  const filesData = filesResponse.data.data || [];
+
   return {
     ...postData,
     owner: '김발명가',
@@ -75,6 +88,7 @@ const fetchPostDetail = async (postId: string) => {
     subClass: 'G10L 15/22',
     techField: 'AI/음성인식',
     abstract: postData.description,
+    files: filesData,
   };
 };
 
@@ -333,6 +347,27 @@ export default function PatentDetailPage() {
                 {post.abstract}
               </p>
             </div>
+
+            {/* Attached Files */}
+            {post.files && post.files.length > 0 && (
+              <div className="mb-6">
+                <h3 className="font-bold text-[#1a365d] mb-3">첨부 파일</h3>
+                <ul className="list-disc list-inside space-y-2">
+                  {post.files.map((file: any) => (
+                    <li key={file.id} className="text-gray-700">
+                      <a
+                        href={file.fileUrl.startsWith('http') ? file.fileUrl : `${apiClient.defaults.baseURL}${file.fileUrl}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        {file.fileName} ({Math.round(file.fileSize / 1024)} KB)
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
