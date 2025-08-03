@@ -21,7 +21,7 @@ export default function PatentRegisterPage() {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'price' ? parseInt(value) : value,
+      [name]: name === 'price' ? (parseInt(value) || 0) : value,
     }));
   };
 
@@ -36,7 +36,11 @@ export default function PatentRegisterPage() {
 
     try {
       const postResponse = await apiClient.post('/api/posts', formData);
-      const postId = postResponse.data.id;
+      const postId = postResponse.data?.data?.id || postResponse.data?.postId;
+
+      if (!postId) {
+        throw new Error('특허 등록에 실패했습니다.');
+      }
 
       if (files.length > 0) {
         const fileFormData = new FormData();
@@ -44,7 +48,7 @@ export default function PatentRegisterPage() {
           fileFormData.append('files', file);
         });
 
-        apiClient.post(`/api/posts/${postId}/files`, fileFormData, {
+        await apiClient.post(`/api/posts/${postId}/files`, fileFormData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
