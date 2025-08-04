@@ -67,6 +67,7 @@ export default function LoginPage() {
             id: memberInfo.id.toString(),
             email: memberInfo.email,
             name: memberInfo.name,
+            profileUrl: memberInfo.profileUrl || null,// 추가된 필드
             role: memberInfo.role || 'USER',
           }, accessToken, refreshToken);
         }
@@ -86,8 +87,26 @@ export default function LoginPage() {
     } catch (error: any) {
       if (error.response?.data?.message) {
         setError(error.response.data.message);
+      } else if (error.response?.status === 401) {
+        setError("이메일 혹은 비밀번호를 잘못 입력하셨거나 등록되지 않은 계정입니다.");
+      } else if (error.response?.status === 400) {
+        setError("이메일 혹은 비밀번호를 잘못 입력하셨거나 등록되지 않은 계정입니다.");
+      } else if (error.response?.status === 403 || error.response?.status === 400) {
+        const resultCode = error.response?.data?.resultCode;
+      
+        if (resultCode === '403-1') {
+          setError("탈퇴한 계정입니다. 새로운 계정으로 가입해주세요.");
+        } else if (resultCode === '403-2') {
+          setError("관리자에 의해 정지된 계정입니다. 관리자에게 문의 바랍니다.");
+        } else {
+          setError("접근 권한이 없습니다.");
+        }
+      } else if (error.response?.status === 500) {
+        setError("서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      } else if (error.request) {
+        setError("서버 연결에 실패했습니다. 네트워크 연결을 확인해주세요.");
       } else {
-        setError("서버 연결에 실패했습니다. 다시 시도해주세요.");
+        setError("로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
       }
     } finally {
       setIsLoading(false);
