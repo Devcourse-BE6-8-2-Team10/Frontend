@@ -72,14 +72,21 @@ class WebSocketService {
 
   // 연결 해제
   public disconnect(): void {
+    console.log("=== WebSocket 연결 해제 시작 ===");
+    console.log("현재 구독 중인 채팅방 수:", this.subscriptions.size);
+    
     if (this.client) {
-      this.subscriptions.forEach((subscription) => {
+      this.subscriptions.forEach((subscription, roomId) => {
+        console.log(`채팅방 ${roomId} 구독 해제`);
         subscription.unsubscribe();
       });
       this.subscriptions.clear();
+      console.log("모든 구독 해제 완료");
+      
       this.client.deactivate();
       this.client = null;
       this.isConnected = false;
+      console.log("WebSocket 클라이언트 해제 완료");
     }
   }
 
@@ -88,19 +95,28 @@ class WebSocketService {
     roomId: number,
     onMessage: (message: ChatMessage) => void
   ): void {
+    console.log(`=== 채팅방 ${roomId} 구독 시도 ===`);
+    
     if (!this.client || !this.isConnected) {
       console.error("WebSocket이 연결되지 않았습니다.");
       return;
     }
 
     // 기존 구독이 있으면 해제
-    this.unsubscribeFromChatRoom(roomId);
+    const existingSubscription = this.subscriptions.get(roomId);
+    if (existingSubscription) {
+      console.log(`기존 채팅방 ${roomId} 구독 해제`);
+      existingSubscription.unsubscribe();
+      this.subscriptions.delete(roomId);
+    }
 
+    console.log(`채팅방 ${roomId} 새 구독 생성`);
     const subscription = this.client.subscribe(
       `/topic/chat/${roomId}`,
       (message) => {
         try {
           const chatMessage: ChatMessage = JSON.parse(message.body);
+          console.log(`채팅방 ${roomId}에서 메시지 수신:`, chatMessage);
           onMessage(chatMessage);
         } catch (error) {
           console.error("메시지 파싱 에러:", error);
@@ -109,7 +125,10 @@ class WebSocketService {
     );
 
     this.subscriptions.set(roomId, subscription);
-    console.log(`채팅방 ${roomId} 구독 완료`);
+    console.log(`✅ 채팅방 ${roomId} 구독 완료, 총 구독 수: ${this.subscriptions.size}`);
+    
+    // 현재 구독 중인 채팅방 목록 출력
+    console.log("현재 구독 중인 채팅방들:", Array.from(this.subscriptions.keys()));
   }
 
   // 채팅방 구독 해제

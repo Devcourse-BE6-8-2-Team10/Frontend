@@ -8,6 +8,7 @@ import React, {
   useCallback,
   ReactNode,
 } from "react";
+import { useSearchParams } from "next/navigation";
 import { ChatMessage, ChatRoom, webSocketService } from "../utils/websocket";
 import { useAuth } from "./AuthContext";
 import { getAccessTokenCookie } from "../utils/cookieUtils";
@@ -27,12 +28,14 @@ interface ChatContextType extends ChatState {
   selectRoom: (room: ChatRoom) => void;
   sendMessage: (content: string) => Promise<void>;
   createTestRoom: () => void;
+  ensureConnected: () => Promise<void>; // 연결 보장 함수 추가
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth();
+  const searchParams = useSearchParams();
   const [state, setState] = useState<ChatState>({
     rooms: [],
     currentRoom: null,
@@ -107,11 +110,24 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         console.warn("서버에서 받은 데이터가 배열 형태가 아닙니다:", roomsData);
       }
 
+      // 중복 채팅방 제거 (같은 ID를 가진 방이 여러 개 있을 경우)
+      const uniqueRooms = rooms.reduce((acc: any[], current: any) => {
+        const existing = acc.find(room => room.id === current.id);
+        if (!existing) {
+          acc.push(current);
+        } else {
+          console.warn(`중복된 채팅방 ID 발견: ${current.id}, 기존 방 유지`);
+        }
+        return acc;
+      }, []);
+
+      console.log("중복 제거 후 채팅방 목록:", uniqueRooms);
+
       setState(prev => ({
         ...prev,
         isConnected: true,
         isLoading: false,
-        rooms: rooms
+        rooms: uniqueRooms
       }));
 
       console.log("채팅 연결 완료");
@@ -126,8 +142,38 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, [user, isAuthenticated]);
 
+  // 연결 보장 함수 - 필요시 자동 연결
+  const ensureConnected = useCallback(async () => {
+    console.log("=== WebSocket 연결 확인 ===");
+    console.log("현재 연결 상태:", state.isConnected);
+    console.log("사용자 인증 상태:", isAuthenticated);
+    console.log("로딩 상태:", state.isLoading);
+
+    if (!isAuthenticated || !user) {
+      throw new Error("로그인이 필요합니다.");
+    }
+
+    if (!state.isConnected && !state.isLoading) {
+      console.log("WebSocket 연결되지 않음 - 자동 연결 시도");
+      await connectToChat();
+    } else if (state.isConnected) {
+      console.log("이미 WebSocket에 연결되어 있음");
+    } else {
+      console.log("연결 중이므로 대기");
+    }
+  }, [isAuthenticated, user, state.isConnected, state.isLoading, connectToChat]);
+
+  // 채팅 페이지 접속 시 자동 WebSocket 연결
+  useEffect(() => {
+    if (isAuthenticated && user && !state.isConnected && !state.isLoading && !state.error) {
+      console.log("채팅 페이지 접속 - 자동 연결 시도");
+      connectToChat();
+    }
+  }, [isAuthenticated, user, state.isConnected, state.isLoading, state.error, connectToChat]);
+
   // WebSocket 연결 해제
   const disconnectFromChat = useCallback(() => {
+    console.log("=== 채팅 연결 해제 ===");
     webSocketService.disconnect();
     setState(prev => ({
       ...prev,
@@ -139,44 +185,61 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   // 채팅방 선택
   const selectRoom = useCallback((room: ChatRoom) => {
-    if (!state.isConnected) {
-      console.error("WebSocket이 연결되지 않았습니다.");
-      return;
-    }
+    console.log("selectRoom 호출:", room.name, "ID:", room.id);
 
-    // 이전 방 구독 해제
-    if (state.currentRoom) {
-      webSocketService.unsubscribeFromChatRoom(state.currentRoom.id);
-    }
+    setState(prev => {
+      if (!prev.isConnected) {
+        console.error("WebSocket이 연결되지 않았습니다.");
+        return prev;
+      }
 
-    // 새 방 구독
-    webSocketService.subscribeToChatRoom(room.id, (message) => {
-      setState(prev => ({
+      // 같은 방을 다시 선택하는 경우 무시
+      if (prev.currentRoom && prev.currentRoom.id === room.id) {
+        console.log("이미 선택된 방입니다.");
+        return prev;
+      }
+
+      if (prev.currentRoom) {
+        webSocketService.unsubscribeFromChatRoom(prev.currentRoom.id);
+        console.log(`이전 채팅방 ${prev.currentRoom.id} 구독 해제`);
+      }
+
+      console.log(`새 채팅방 ${room.id} 구독 시작`);
+      webSocketService.subscribeToChatRoom(room.id, (message) => {
+        console.log("ChatContext에서 메시지 수신:", message);
+        setState(prevState => {
+          console.log("메시지를 상태에 추가:", message.content);
+          return {
+            ...prevState,
+            messages: [...prevState.messages, message]
+          };
+        });
+      });
+
+      console.log(`방 선택 완료: ${room.name}`);
+
+      return {
         ...prev,
-        messages: [...prev.messages, message]
-      }));
+        currentRoom: room,
+        messages: [] // 새 방 선택시 메시지 초기화
+      };
     });
-
-    setState(prev => ({
-      ...prev,
-      currentRoom: room,
-      messages: [] // 새 방 선택시 메시지 초기화
-    }));
-
-    console.log(`방 선택: ${room.name}`);
-  }, [state.isConnected, state.currentRoom]);
+  }, []);
 
   // 메시지 전송
   const sendMessage = useCallback(async (content: string) => {
     console.log("=== ChatContext sendMessage 호출 ===");
     console.log("content:", content);
     console.log("user:", user);
-    console.log("currentRoom:", state.currentRoom);
-    console.log("isConnected:", state.isConnected);
 
-    if (!user || !state.currentRoom || !state.isConnected) {
+    if (!user) {
+      console.error("❌ 사용자 정보가 없습니다.");
+      throw new Error("사용자 정보가 없습니다.");
+    }
+
+    // state를 직접 읽어서 조건 확인
+    if (!state.currentRoom || !state.isConnected) {
       console.error("❌ 메시지 전송 조건이 맞지 않습니다.");
-      console.error("user:", user);
       console.error("currentRoom:", state.currentRoom);
       console.error("isConnected:", state.isConnected);
       throw new Error("메시지 전송 조건이 맞지 않습니다.");
@@ -220,6 +283,20 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }));
   }, [user]);
 
+  // URL 파라미터로 전달된 roomId 처리 - 단순화
+  useEffect(() => {
+    const roomIdFromUrl = searchParams.get('roomId');
+
+    // 한 번만 실행되도록 체크
+    if (roomIdFromUrl && state.rooms.length > 0 && state.isConnected && !state.currentRoom) {
+      const targetRoom = state.rooms.find(room => room.id === Number(roomIdFromUrl));
+      if (targetRoom) {
+        console.log("URL 파라미터로 채팅방 자동 선택:", targetRoom.name);
+        selectRoom(targetRoom);
+      }
+    }
+  }, [searchParams, state.rooms, state.isConnected, state.currentRoom, selectRoom]);
+
   // 컴포넌트 언마운트 시 연결 해제
   useEffect(() => {
     return () => {
@@ -234,6 +311,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     selectRoom,
     sendMessage,
     createTestRoom,
+    ensureConnected, // 연결 보장 함수 추가
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

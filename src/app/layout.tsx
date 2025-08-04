@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ChatProvider } from "@/contexts/ChatContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
@@ -21,23 +22,25 @@ export default function RootLayout({
     <html lang="ko">
       <body className={inter.className}>
         <AuthProvider>
-          <div className="min-h-screen bg-[#2A5298] flex flex-col">
-            {/* Header */}
-            <Header />
+          <ChatProvider>
+            <div className="min-h-screen bg-[#2A5298] flex flex-col">
+              {/* Header */}
+              <Header />
 
-            {/* Main Content */}
-            <main className="flex-grow">{children}</main>
+              {/* Main Content */}
+              <main className="flex-grow">{children}</main>
 
-            {/* Footer */}
-            <Footer />
+              {/* Footer */}
+              <Footer />
 
-            {/* Floating Action Button */}
-            <div className="fixed bottom-6 right-6">
-              <button className="bg-purple-600 hover:bg-purple-700 text-white w-14 h-14 rounded-full shadow-lg transition-colors flex items-center justify-center">
-                <span className="text-xl">💬</span>
-              </button>
+              {/* Floating Action Button */}
+              <div className="fixed bottom-6 right-6">
+                <button className="bg-purple-600 hover:bg-purple-700 text-white w-14 h-14 rounded-full shadow-lg transition-colors flex items-center justify-center">
+                  <span className="text-xl">💬</span>
+                </button>
+              </div>
             </div>
-          </div>
+          </ChatProvider>
         </AuthProvider>
       </body>
     </html>

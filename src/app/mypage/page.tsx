@@ -1,5 +1,6 @@
 'use client';
 
+
 import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -14,6 +15,7 @@ export default function MyPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [selectedTradeId, setSelectedTradeId] = useState<number | null>(null);
+
 
   // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
   useEffect(() => {
@@ -50,7 +52,7 @@ export default function MyPage() {
           'Authorization': `Bearer ${accessToken}`
         },
       });
-      
+
       await refreshUserInfo();
 
     } catch (error) {
@@ -84,7 +86,7 @@ export default function MyPage() {
       <section className="px-6 py-8">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-2xl font-bold text-white mb-8">마이페이지</h1>
-          
+
           {/* User Info Card */}
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 mb-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
@@ -131,7 +133,7 @@ export default function MyPage() {
                   {uploadError && <p className="text-sm text-red-600">{uploadError}</p>}
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => router.push('/mypage/edit')}
                 className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors cursor-pointer text-sm"
               >
@@ -153,7 +155,7 @@ export default function MyPage() {
               </div>
             </div>
           </div>
-          
+
           {/* My Patents Section */}
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 mb-6 shadow-xl">
             <h3 className="text-lg font-bold text-[#1a365d] mb-4">내 특허</h3>
@@ -174,7 +176,7 @@ export default function MyPage() {
                   <button className="text-red-600 hover:text-red-700 text-sm">삭제</button>
                 </div>
               </div>
-              
+
               {/* My Patent Card 2 */}
               <div className="border border-gray-200 rounded-xl p-4 bg-white/50">
                 <div className="bg-green-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">
@@ -191,7 +193,7 @@ export default function MyPage() {
                   <button className="text-red-600 hover:text-red-700 text-sm">삭제</button>
                 </div>
               </div>
-              
+
               {/* Add New Patent */}
               <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 flex items-center justify-center bg-white/30">
                 <button className="text-gray-500 hover:text-purple-600 transition-colors">
@@ -201,7 +203,6 @@ export default function MyPage() {
               </div>
             </div>
           </div>
-          
           {/* Liked Patents Section */}
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 mb-6 shadow-xl">
             <h3 className="text-lg font-bold text-[#1a365d] mb-4">찜한 특허</h3>
@@ -222,7 +223,6 @@ export default function MyPage() {
                   <button className="text-red-600 hover:text-red-700 text-sm">찜해제</button>
                 </div>
               </div>
-              
               {/* Liked Patent Card 2 */}
               <div className="border border-gray-200 rounded-xl p-4 bg-white/50">
                 <div className="bg-purple-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">

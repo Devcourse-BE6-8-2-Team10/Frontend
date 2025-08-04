@@ -75,70 +75,13 @@ export default function ChatRoom() {
           <p className="text-sm text-gray-600">안녕하세요, {user.name}님!</p>
         </div>
 
-        {/* 연결 상태 및 컨트롤 */}
+        {/* 연결 상태 표시 */}
         <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2">
             <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
             <span className="text-sm font-medium">
               {isConnected ? '연결됨' : '연결 안됨'}
             </span>
-          </div>
-
-          <div className="flex gap-2">
-            {!isConnected ? (
-              <button
-                onClick={connectToChat}
-                disabled={isLoading}
-                className="flex-1 px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 text-sm"
-              >
-                {isLoading ? '연결 중...' : '채팅 연결'}
-              </button>
-            ) : (
-              <button
-                onClick={disconnectFromChat}
-                className="flex-1 px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
-              >
-                연결 해제
-              </button>
-            )}
-
-            <button
-              onClick={createTestRoom}
-              className="px-3 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-            >
-              방 생성
-            </button>
-          </div>
-
-          {/* 테스트용 1:1 채팅 버튼들 */}
-          <div className="flex gap-1 mt-2">
-            <button
-              onClick={() => {
-                const testRoom = {
-                  id: 4,
-                  name: "User1과 User2의 채팅",
-                  participants: ["user1@user.com", "test1@user.com"]
-                };
-                selectRoom(testRoom);
-              }}
-              className="flex-1 px-2 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-xs"
-            >
-              테스트채팅1
-            </button>
-
-            <button
-              onClick={() => {
-                const testRoom = {
-                  id: 2,
-                  name: "구매자-판매자 채팅",
-                  participants: [user.email, "seller@test.com"]
-                };
-                selectRoom(testRoom);
-              }}
-              className="flex-1 px-2 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600 text-xs"
-            >
-              테스트채팅2
-            </button>
           </div>
         </div>
 
