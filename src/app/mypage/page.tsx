@@ -203,7 +203,6 @@ export default function MyPage() {
               </div>
             </div>
           </div>
-
           {/* Liked Patents Section */}
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 mb-6 shadow-xl">
             <h3 className="text-lg font-bold text-[#1a365d] mb-4">찜한 특허</h3>
@@ -224,7 +223,6 @@ export default function MyPage() {
                   <button className="text-red-600 hover:text-red-700 text-sm">찜해제</button>
                 </div>
               </div>
-
               {/* Liked Patent Card 2 */}
               <div className="border border-gray-200 rounded-xl p-4 bg-white/50">
                 <div className="bg-purple-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">
@@ -251,9 +249,9 @@ export default function MyPage() {
 
       {/* Trade Detail Modal */}
       {selectedTradeId && (
-        <TradeDetail
-          tradeId={selectedTradeId}
-          onClose={() => setSelectedTradeId(null)}
+        <TradeDetail 
+          tradeId={selectedTradeId} 
+          onClose={() => setSelectedTradeId(null)} 
         />
       )}
     </div>
