@@ -91,7 +91,7 @@ export default function LoginPage() {
         setError("이메일 혹은 비밀번호를 잘못 입력하셨거나 등록되지 않은 계정입니다.");
       } else if (error.response?.status === 400) {
         setError("이메일 혹은 비밀번호를 잘못 입력하셨거나 등록되지 않은 계정입니다.");
-      } else if (error.response?.status === 403 || error.response?.status === 400) {
+      } else if (error.response?.status === 403) {
         const resultCode = error.response?.data?.resultCode;
       
         if (resultCode === '403-1') {
