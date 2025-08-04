@@ -94,6 +94,11 @@ export const chatAPI = {
     const response = await apiClient.post("/api/chat/private", { otherUserId });
     return response.data;
   },
+
+  // 채팅방 삭제
+  deleteChatRoom: async (roomId: number): Promise<void> => {
+    await apiClient.delete(`/api/chat/rooms/${roomId}`);
+  },
 };
 
 // 특허 관련 API 함수들
