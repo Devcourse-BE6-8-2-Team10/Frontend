@@ -34,6 +34,8 @@ interface ChatContextType extends ChatState {
   ensureConnected: () => Promise<void>;
   getCurrentRoomMessages: () => ChatMessage[]; // 현재 방 메시지 가져오기
   deleteChatRoom: (roomId: number) => Promise<void>; // 채팅방 삭제
+  markRoomAsRead: (roomId: number) => void; // 특정 방을 읽음 처리
+  getUnreadCount: (roomId: number) => number; // 특정 방의 읽지 않은 메시지 수
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -187,6 +189,38 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         rooms: uniqueRooms
       }));
 
+      console.log("=== 모든 채팅방 구독 시작 ===");
+      uniqueRooms.forEach((room: any) => {
+        webSocketService.subscribeToChatRoom(room.id, (message) => {
+          
+          // roomId가 없으면 현재 구독중인 방 ID를 사용
+          const messageRoomId = message.roomId || message.chatRoomId || room.id;
+          
+          setState(prevState => {
+            // 현재 선택된 방과 다른 방의 메시지면 읽지 않은 메시지 수 증가
+            const shouldIncrementUnread = prevState.currentRoom?.id !== messageRoomId;
+            
+            if (shouldIncrementUnread) {
+              console.log(`방 ${messageRoomId} 읽지 않은 메시지 수: ${(prevState.unreadCounts[messageRoomId] || 0)} → ${(prevState.unreadCounts[messageRoomId] || 0) + 1}`);
+            }
+            
+            return {
+              ...prevState,
+              messagesByRoom: {
+                ...prevState.messagesByRoom,
+                [messageRoomId]: [...(prevState.messagesByRoom[messageRoomId] || []), message]
+              },
+              // 다른 방의 메시지면 읽지 않은 메시지 수 증가
+              unreadCounts: shouldIncrementUnread ? {
+                ...prevState.unreadCounts,
+                [messageRoomId]: (prevState.unreadCounts[messageRoomId] || 0) + 1
+              } : prevState.unreadCounts
+            };
+          });
+        });
+      });
+      console.log(`총 ${uniqueRooms.length}개 채팅방 구독 완료`);
+
       console.log("채팅 연결 완료");
     } catch (error) {
       console.error("채팅 연결 실패:", error);
@@ -240,47 +274,32 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  //  채팅방 선택 - 구독 해제를 setState 밖으로 이동
+  //  채팅방 선택 - 구독은 이미 되어있으니 currentRoom만 변경
   const selectRoom = useCallback(async (room: ChatRoom) => {
     console.log("selectRoom 호출:", room.name, "ID:", room.id);
 
-    // 연결 상태 체크 (setState 밖에서)
+    // 연결 상태 체크
     if (!state.isConnected) {
       console.error("WebSocket이 연결되지 않았습니다.");
       return;
     }
 
-    // 같은 방 체크 (setState 밖에서)
+    // 같은 방 체크
     if (state.currentRoom && state.currentRoom.id === room.id) {
       console.log("이미 선택된 방입니다.");
       return;
     }
 
-    // 이전 방 구독 해제 (setState 밖에서)
-    if (state.currentRoom) {
-      webSocketService.unsubscribeFromChatRoom(state.currentRoom.id);
-      console.log(`이전 채팅방 ${state.currentRoom.id} 구독 해제`);
-    }
+    console.log(`채팅방 선택: ${room.name} (ID: ${room.id})`);
 
-    // 새 방 구독 시작 (setState 밖에서)
-    console.log(`새 채팅방 ${room.id} 구독 시작`);
-    webSocketService.subscribeToChatRoom(room.id, (message) => {
-      console.log("ChatContext에서 메시지 수신:", message);
-      setState(prevState => {
-        return {
-          ...prevState,
-          messagesByRoom: {
-            ...prevState.messagesByRoom,
-            [room.id]: [...(prevState.messagesByRoom[room.id] || []), message]
-          }
-        };
-      });
-    });
-
-    // 상태 업데이트 (순수하게 상태만 변경)
+    // 상태 업데이트
     setState(prev => ({
       ...prev,
-      currentRoom: room
+      currentRoom: room,
+      unreadCounts: {
+        ...prev.unreadCounts,
+        [room.id]: 0 // 선택한 방의 읽지 않은 메시지 수를 0으로 초기화
+      }
     }));
 
     // 해당 방의 메시지가 없으면 로드
@@ -350,6 +369,21 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }));
   }, [user]);
 
+  // 읽지 않은 메시지 수 관리 함수들
+  const markRoomAsRead = useCallback((roomId: number) => {
+    setState(prev => ({
+      ...prev,
+      unreadCounts: {
+        ...prev.unreadCounts,
+        [roomId]: 0
+      }
+    }));
+  }, []);
+
+  const getUnreadCount = useCallback((roomId: number) => {
+    return state.unreadCounts[roomId] || 0;
+  }, [state.unreadCounts]);
+
   // 채팅방 삭제
   const deleteChatRoom = useCallback(async (roomId: number) => {
     try {
@@ -372,6 +406,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         // 해당 방의 메시지도 제거
         messagesByRoom: Object.fromEntries(
           Object.entries(prev.messagesByRoom).filter(([id]) => Number(id) !== roomId)
+        ),
+        // 해당 방의 읽지 않은 메시지 수도 제거
+        unreadCounts: Object.fromEntries(
+          Object.entries(prev.unreadCounts).filter(([id]) => Number(id) !== roomId)
         )
       }));
       
@@ -413,6 +451,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     ensureConnected,
     getCurrentRoomMessages, // 새로운 함수 추가
     deleteChatRoom, // 채팅방 삭제 함수 추가
+    markRoomAsRead, // 읽음 처리 함수 추가
+    getUnreadCount, // 읽지 않은 메시지 수 조회 함수 추가
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

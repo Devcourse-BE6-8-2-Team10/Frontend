@@ -17,7 +17,8 @@ export default function ChatRoom() {
     sendMessage,
     createTestRoom,
     getCurrentRoomMessages,
-    deleteChatRoom
+    deleteChatRoom,
+    getUnreadCount
   } = useChat();
 
   const { user, isAuthenticated } = useAuth();
@@ -111,46 +112,63 @@ export default function ChatRoom() {
 
         {/* 채팅방 목록 */}
         <div className="flex-1 overflow-y-auto">
-          {Array.isArray(rooms) && rooms.map((room) => (
-            <div
-              key={room.id}
-              onClick={() => selectRoom(room)}
-              className={`p-4 cursor-pointer border-b border-gray-100 hover:bg-gray-50 relative group ${
-                currentRoom?.id === room.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="font-medium text-gray-800 flex-1">{room.name}</h3>
-                {/* 삭제 버튼 - 인라인 스타일로 확실히 보이게 */}
-                <button
-                  onClick={(e) => handleDeleteRoom(room.id, e)}
-                  style={{
-                    padding: '4px',
-                    color: '#999',
-                    backgroundColor: 'transparent',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    marginLeft: '8px'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = '#ef4444';
-                    e.currentTarget.style.backgroundColor = '#fef2f2';
-                    e.currentTarget.style.borderColor = '#ef4444';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = '#999';
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.borderColor = '#ddd';
-                  }}
-                  title="채팅방 나가기"
-                >
-                  🗑️
-                </button>
+          {Array.isArray(rooms) && rooms.map((room) => {
+            const unreadCount = getUnreadCount(room.id);
+            
+            return (
+              <div
+                key={room.id}
+                onClick={() => selectRoom(room)}
+                className={`p-4 cursor-pointer border-b border-gray-100 hover:bg-gray-50 relative group ${
+                  currentRoom?.id === room.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-gray-800 flex-1">{room.name}</h3>
+                  
+                  {/* 읽지 않은 메시지 개수 표시 */}
+                  {unreadCount > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="inline-flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-red-500 rounded-full"
+                        title={`읽지 않은 메시지 ${unreadCount}개`}
+                      >
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* 삭제 버튼 - 인라인 스타일로 확실히 보이게 */}
+                  <button
+                    onClick={(e) => handleDeleteRoom(room.id, e)}
+                    style={{
+                      padding: '4px',
+                      color: '#999',
+                      backgroundColor: 'transparent',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      marginLeft: '8px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#ef4444';
+                      e.currentTarget.style.backgroundColor = '#fef2f2';
+                      e.currentTarget.style.borderColor = '#ef4444';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#999';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.borderColor = '#ddd';
+                    }}
+                    title="채팅방 나가기"
+                  >
+                    🗑️
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {(!Array.isArray(rooms) || rooms.length === 0) && isConnected && (
             <div className="p-4 text-center text-gray-500">
