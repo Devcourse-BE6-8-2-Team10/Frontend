@@ -186,7 +186,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   // 채팅방 선택
   const selectRoom = useCallback((room: ChatRoom) => {
     console.log("selectRoom 호출:", room.name, "ID:", room.id);
-    
+
     setState(prev => {
       if (!prev.isConnected) {
         console.error("WebSocket이 연결되지 않았습니다.");
@@ -197,6 +197,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       if (prev.currentRoom && prev.currentRoom.id === room.id) {
         console.log("이미 선택된 방입니다.");
         return prev;
+      }
+
+      if (prev.currentRoom) {
+        webSocketService.unsubscribeFromChatRoom(prev.currentRoom.id);
+        console.log(`이전 채팅방 ${prev.currentRoom.id} 구독 해제`);
       }
 
       console.log(`새 채팅방 ${room.id} 구독 시작`);
@@ -212,7 +217,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       });
 
       console.log(`방 선택 완료: ${room.name}`);
-      
+
       return {
         ...prev,
         currentRoom: room,
@@ -281,7 +286,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   // URL 파라미터로 전달된 roomId 처리 - 단순화
   useEffect(() => {
     const roomIdFromUrl = searchParams.get('roomId');
-    
+
     // 한 번만 실행되도록 체크
     if (roomIdFromUrl && state.rooms.length > 0 && state.isConnected && !state.currentRoom) {
       const targetRoom = state.rooms.find(room => room.id === Number(roomIdFromUrl));
