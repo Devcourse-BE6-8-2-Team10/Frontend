@@ -200,11 +200,17 @@ export const adminAPI = {
     return response.data;
   },
 
+  // 회원 상세 정보 조회 (관리자 전용)
+  getMemberDetail: async (memberId: number): Promise<any> => {
+    const response = await apiClient.get(`/api/admin/members/${memberId}`);
+    return response.data;
+  },
+
   // 회원 정보 수정 (관리자 전용)
   updateMemberByAdmin: async (memberId: number, data: {
     name?: string;
-    role?: string;
     status?: string;
+    profileUrl?: string | null;
   }): Promise<void> => {
     await apiClient.patch(`/api/admin/members/${memberId}`, data);
   },

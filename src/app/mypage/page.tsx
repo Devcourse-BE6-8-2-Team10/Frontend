@@ -46,7 +46,7 @@ export default function MyPage() {
     formData.append('file', file);
 
     try {
-      await apiClient.post(`/api/members/${user.id}/profile-image`, formData, {
+      await apiClient.post(`/api/members/${user?.id}/profile-image`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${accessToken}`
