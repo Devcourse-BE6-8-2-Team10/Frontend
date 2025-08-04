@@ -140,4 +140,51 @@ export const memberAPI = {
   },
 };
 
+// 거래 관련 API 함수들
+export const tradeAPI = {
+  // 본인 모든 거래 조회
+  getMyTrades: async (page: number = 0, size: number = 10): Promise<{
+    content: TradeDto[];
+    page: number;
+    size: number;
+    totalElements: number;
+    totalPages: number;
+    last: boolean;
+  }> => {
+    const response = await apiClient.get("/api/trades", {
+      params: { page, size },
+    });
+    return response.data.data;
+  },
+
+  // 거래 상세 조회
+  getTradeDetail: async (tradeId: number): Promise<TradeDetailDto> => {
+    const response = await apiClient.get(`/api/trades/${tradeId}`);
+    return response.data.data;
+  },
+};
+
+// 거래 관련 타입 정의
+export interface TradeDto {
+  id: number;
+  postId: number;
+  sellerId: number;
+  buyerId: number;
+  price: number;
+  status: string;
+  createdAt: string;
+}
+
+export interface TradeDetailDto {
+  id: number;
+  postId: number;
+  postTitle: string;
+  postCategory: string;
+  price: number;
+  status: string;
+  createdAt: string;
+  sellerEmail: string;
+  buyerEmail: string;
+}
+
 export default apiClient;
