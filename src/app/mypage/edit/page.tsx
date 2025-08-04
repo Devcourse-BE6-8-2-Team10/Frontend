@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { memberAPI } from "@/utils/apiClient";
+import apiClient from "@/utils/apiClient";
 
 interface MemberUpdateRequest {
   name: string;
@@ -13,8 +14,9 @@ interface MemberUpdateRequest {
 }
 
 export default function EditProfile() {
-  const { user, isAuthenticated, loading, updateUser, refreshUserInfo, logout } = useAuth();
+  const { user, isAuthenticated, loading, refreshUserInfo, logout, userUpdateTimestamp, accessToken } = useAuth();
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState<MemberUpdateRequest>({
     name: '',
@@ -27,6 +29,9 @@ export default function EditProfile() {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [showImageDeleteConfirm, setShowImageDeleteConfirm] = useState(false);
 
   // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
   useEffect(() => {
@@ -136,6 +141,56 @@ export default function EditProfile() {
     }
   };
 
+  const handleImageChangeClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      await apiClient.post(`/api/members/${user.id}/profile-image`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${accessToken}`
+        },
+      });
+      await refreshUserInfo();
+      setMessage({ type: 'success', text: '프로필 이미지가 성공적으로 변경되었습니다.' });
+    } catch (error) {
+      console.error('Failed to upload profile image:', error);
+      setUploadError('이미지 업로드에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleImageDelete = async () => {
+    if (!user) return;
+
+    try {
+      await apiClient.delete(`/api/members/${user.id}/profile-image`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+      await refreshUserInfo();
+      setMessage({ type: 'success', text: '프로필 이미지가 삭제되었습니다.' });
+    } catch (error) {
+      console.error('Failed to delete profile image:', error);
+      setMessage({ type: 'error', text: '이미지 삭제에 실패했습니다.' });
+    } finally {
+      setShowImageDeleteConfirm(false);
+    }
+  };
+
   // 로딩 중이거나 인증되지 않은 경우 로딩 표시
   if (loading || !isAuthenticated) {
     return (
@@ -166,9 +221,6 @@ export default function EditProfile() {
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
-                <div className="bg-purple-100 rounded-full w-12 h-12 flex items-center justify-center">
-                  <span className="text-purple-600 text-xl">👤</span>
-                </div>
                 <div>
                   <h2 className="text-lg font-bold text-[#1a365d]">프로필 정보 수정</h2>
                   <p className="text-gray-600 text-sm">개인정보를 안전하게 수정하세요</p>
@@ -193,6 +245,42 @@ export default function EditProfile() {
                 {message.text}
               </div>
             )}
+
+            {/* Profile Image Section */}
+            <div className="flex flex-col items-center gap-4 mb-6">
+              {user?.profileUrl ? (
+                <img
+                  src={`${user.profileUrl.startsWith('http') ? user.profileUrl : `${process.env.NEXT_PUBLIC_BACKEND_URL}${user.profileUrl}`}?t=${userUpdateTimestamp}`}
+                  alt="Profile"
+                  className="w-24 h-24 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-400 to-indigo-600 flex items-center justify-center">
+                  <span className="text-white text-4xl">
+                    {user?.name?.charAt(0) || '👤'}
+                  </span>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button onClick={handleImageChangeClick} disabled={isUploading} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors text-sm">
+                  {isUploading ? '업로드 중...' : '이미지 변경'}
+                </button>
+                {user?.profileUrl && (
+                  <button onClick={() => setShowImageDeleteConfirm(true)} className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm">
+                    이미지 삭제
+                  </button>
+                )}
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                accept="image/png, image/jpeg, image/gif"
+                aria-label="프로필 이미지 업로드"
+              />
+              {uploadError && <p className="text-sm text-red-600">{uploadError}</p>}
+            </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Name Field */}
@@ -325,6 +413,32 @@ export default function EditProfile() {
           </div>
         </div>
       )}
+
+      {/* 이미지 삭제 확인 모달 */}
+      {showImageDeleteConfirm && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border border-gray-200">
+            <h3 className="text-lg font-bold text-red-600 mb-4">프로필 이미지 삭제</h3>
+            <p className="text-gray-700 mb-6">
+              정말로 프로필 이미지를 삭제하시겠습니까?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowImageDeleteConfirm(false)}
+                className="flex-1 px-4 py-2 cursor-pointer bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleImageDelete}
+                className="flex-1 px-4 py-2 cursor-pointer bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-} 
+}

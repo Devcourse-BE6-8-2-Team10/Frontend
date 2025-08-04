@@ -15,6 +15,7 @@ interface User {
   id: string;
   email: string;
   name: string;
+  profileUrl: string | null;
   // 필요한 다른 사용자 정보들
 }
 
@@ -27,6 +28,7 @@ interface AuthContextType {
   refreshUserInfo: () => Promise<void>;
   loading: boolean;
   accessToken: string | null;
+  userUpdateTimestamp: number;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -47,6 +49,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [userUpdateTimestamp, setUserUpdateTimestamp] = useState(Date.now());
 
   // JWT 토큰 만료시간 확인
   const isTokenExpired = (token: string): boolean => {
@@ -76,6 +79,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           id: response.data.data.id,
           email: response.data.data.email,
           name: response.data.data.name,
+          profileUrl: response.data.data.profileUrl,
         };
         
         return userData;
@@ -199,6 +203,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const userData = await fetchUserInfo();
     if (userData) {
       setUser(userData);
+      setUserUpdateTimestamp(Date.now());
     }
   }, [fetchUserInfo]);
 
@@ -211,6 +216,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     refreshUserInfo,
     loading,
     accessToken,
+    userUpdateTimestamp,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
