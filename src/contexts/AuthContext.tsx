@@ -16,6 +16,7 @@ interface User {
   email: string;
   name: string;
   profileUrl: string | null;
+  role: string;
   // 필요한 다른 사용자 정보들
 }
 
@@ -80,6 +81,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           email: response.data.data.email,
           name: response.data.data.name,
           profileUrl: response.data.data.profileUrl,
+          role: response.data.data.role || 'USER',
         };
         
         return userData;

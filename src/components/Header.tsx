@@ -69,6 +69,14 @@ const Header = () => {
               <Link href="/mypage" className="hover:text-indigo-500 transition-colors">
                 마이페이지
               </Link>
+              {user?.role === 'ADMIN' && (
+                <Link 
+                  href="/admin/members" 
+                  className="hover:text-indigo-500 transition-colors"
+                >
+                  관리페이지
+                </Link>
+              )}
               <button
                 onClick={handleLogout}
                 className="hover:text-indigo-500 transition-colors cursor-pointer"

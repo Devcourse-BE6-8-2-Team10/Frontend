@@ -187,4 +187,47 @@ export interface TradeDetailDto {
   buyerEmail: string;
 }
 
+// 관리자 관련 API 함수들
+export const adminAPI = {
+  // 전체 회원 목록 조회 (관리자 전용)
+  getAllMembers: async (): Promise<any> => {
+    const response = await apiClient.get('/api/admin/members');
+    return response.data;
+  },
+
+  // 회원 정보 수정 (관리자 전용)
+  updateMemberByAdmin: async (memberId: number, data: {
+    name?: string;
+    role?: string;
+    status?: string;
+  }): Promise<void> => {
+    await apiClient.patch(`/api/admin/members/${memberId}`, data);
+  },
+
+  // 회원 삭제 (관리자 전용)
+  deleteMemberByAdmin: async (memberId: number): Promise<void> => {
+    await apiClient.delete(`/api/admin/members/${memberId}`);
+  },
+
+  // 전체 특허 목록 조회 (관리자 전용)
+  getAllPatents: async (): Promise<any> => {
+    const response = await apiClient.get('/api/posts');
+    return response.data;
+  },
+
+  // 특허 정보 수정 (관리자 전용)
+  updatePatentByAdmin: async (patentId: number, data: {
+    title?: string;
+    description?: string;
+    status?: string;
+  }): Promise<void> => {
+    await apiClient.patch(`/api/admin/patents/${patentId}`, data);
+  },
+
+  // 특허 삭제 (관리자 전용)
+  deletePatentByAdmin: async (patentId: number): Promise<void> => {
+    await apiClient.delete(`/api/admin/patents/${patentId}`);
+  },
+};
+
 export default apiClient;

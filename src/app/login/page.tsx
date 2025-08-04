@@ -7,7 +7,7 @@ import apiClient from "@/utils/apiClient";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isAuthenticated, loading } = useAuth();
+  const { login, isAuthenticated, loading, user } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -18,9 +18,14 @@ export default function LoginPage() {
   // 로그인 상태에서 로그인 페이지 접근 방지
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      router.push("/");
+      // Role에 따라 리다이렉트
+      if (user?.role === 'ADMIN') {
+        router.push("/admin/members");
+      } else {
+        router.push("/");
+      }
     }
-  }, [isAuthenticated, loading, router]);
+  }, [isAuthenticated, loading, user, router]);
 
   // 로딩 중이거나 이미 로그인된 경우 로딩 화면 표시
   if (loading || isAuthenticated) {
@@ -62,11 +67,19 @@ export default function LoginPage() {
             id: memberInfo.id.toString(),
             email: memberInfo.email,
             name: memberInfo.name,
+            role: memberInfo.role || 'USER',
           }, accessToken, refreshToken);
         }
         
-        // 로그인 성공 시 메인 페이지로 리다이렉트
-        router.push("/");
+        // Role에 따라 리다이렉트
+        const userRole = memberInfo?.role || 'USER';
+        if (userRole === 'ADMIN') {
+          // 관리자는 관리자 페이지로 리다이렉트
+          router.push("/admin/members");
+        } else {
+          // 일반 사용자는 메인 페이지로 리다이렉트
+          router.push("/");
+        }
       } else {
         setError("로그인 응답 데이터가 올바르지 않습니다.");
       }
