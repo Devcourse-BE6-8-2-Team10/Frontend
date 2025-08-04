@@ -189,34 +189,19 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         rooms: uniqueRooms
       }));
 
-      // 모든 채팅방을 미리 구독해서 읽지 않은 메시지를 실시간으로 감지
       console.log("=== 모든 채팅방 구독 시작 ===");
       uniqueRooms.forEach((room: any) => {
-        console.log(`채팅방 ${room.id} (${room.name}) 구독 중...`);
         webSocketService.subscribeToChatRoom(room.id, (message) => {
-          console.log(`🔔 채팅방 ${room.id}에서 메시지 수신:`, message);
-          console.log(`📋 메시지 전체 구조:`, JSON.stringify(message, null, 2));
-          console.log(`🔑 메시지 키들:`, Object.keys(message));
           
           // roomId가 없으면 현재 구독중인 방 ID를 사용
           const messageRoomId = message.roomId || message.chatRoomId || room.id;
-          console.log(`📍 사용할 방 ID: ${messageRoomId} (원본: ${message.roomId}, 대체: ${room.id})`);
           
           setState(prevState => {
             // 현재 선택된 방과 다른 방의 메시지면 읽지 않은 메시지 수 증가
             const shouldIncrementUnread = prevState.currentRoom?.id !== messageRoomId;
             
-            console.log(`=== 읽지 않은 메시지 처리 ===`);
-            console.log(`수신된 메시지 방 ID: ${messageRoomId}`);
-            console.log(`현재 선택된 방 ID: ${prevState.currentRoom?.id}`);
-            console.log(`읽지 않은 메시지 수 증가 여부: ${shouldIncrementUnread}`);
-            
             if (shouldIncrementUnread) {
-              const currentUnreadCount = prevState.unreadCounts[messageRoomId] || 0;
-              console.log(`방 ${messageRoomId}의 기존 읽지 않은 메시지 수: ${currentUnreadCount}`);
-              console.log(`방 ${messageRoomId}의 새로운 읽지 않은 메시지 수: ${currentUnreadCount + 1}`);
-            } else {
-              console.log(`현재 보고 있는 방의 메시지이므로 읽지 않은 메시지 수 증가 안 함`);
+              console.log(`방 ${messageRoomId} 읽지 않은 메시지 수: ${(prevState.unreadCounts[messageRoomId] || 0)} → ${(prevState.unreadCounts[messageRoomId] || 0) + 1}`);
             }
             
             return {
@@ -234,7 +219,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           });
         });
       });
-      console.log(`=== 총 ${uniqueRooms.length}개 채팅방 구독 완료 ===`);
+      console.log(`총 ${uniqueRooms.length}개 채팅방 구독 완료`);
 
       console.log("채팅 연결 완료");
     } catch (error) {
@@ -305,25 +290,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    console.log(`=== 채팅방 선택: ${room.name} (ID: ${room.id}) ===`);
-    console.log(`이전 방: ${state.currentRoom?.name || '없음'} (ID: ${state.currentRoom?.id || '없음'})`);
+    console.log(`채팅방 선택: ${room.name} (ID: ${room.id})`);
 
-    // 상태 업데이트 (구독은 이미 되어있으니 currentRoom만 변경)
-    setState(prev => {
-      const newUnreadCounts = {
+    // 상태 업데이트
+    setState(prev => ({
+      ...prev,
+      currentRoom: room,
+      unreadCounts: {
         ...prev.unreadCounts,
         [room.id]: 0 // 선택한 방의 읽지 않은 메시지 수를 0으로 초기화
-      };
-      
-      console.log(`방 ${room.id} 읽지 않은 메시지 수 0으로 초기화`);
-      console.log(`전체 읽지 않은 메시지 현황:`, newUnreadCounts);
-      
-      return {
-        ...prev,
-        currentRoom: room,
-        unreadCounts: newUnreadCounts
-      };
-    });
+      }
+    }));
 
     // 해당 방의 메시지가 없으면 로드
     if (!state.messagesByRoom[room.id]) {
