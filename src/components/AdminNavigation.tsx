@@ -28,7 +28,9 @@ export default function AdminNavigation({ user }: AdminNavigationProps) {
         </div>
         <div>
           <h2 className="text-lg font-bold text-[#1a365d]">관리자 계정</h2>
-          <p className="text-gray-600 text-sm">{user?.name} ({user?.email})</p>
+          <p className="text-gray-600 text-sm">
+            {user ? `${user.name} (${user.email})` : '관리자'}
+          </p>
         </div>
       </div>
 

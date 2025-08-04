@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import React from "react";
 import { adminAPI } from "@/utils/apiClient";
 import AdminNavigation from "@/components/AdminNavigation";
+import AdminLoadingSpinner from "@/components/AdminLoadingSpinner";
+import { useAdminTable } from "@/hooks/useAdminTable";
 
 interface Member {
   id: number;
@@ -18,60 +18,23 @@ interface Member {
 }
 
 export default function AdminMembersPage() {
-  const { user, isAuthenticated, loading } = useAuth();
-  const router = useRouter();
-  const [members, setMembers] = useState<Member[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  // 로그인하지 않은 사용자나 ADMIN이 아닌 사용자는 접근 차단
-  useEffect(() => {
-    if (!loading) {
-      if (!isAuthenticated) {
-        router.push('/login');
-      } else if (user?.role !== 'ADMIN') {
-        router.push('/');
-      }
-    }
-  }, [isAuthenticated, loading, user, router]);
-
-  // 회원 목록 가져오기
-  useEffect(() => {
-    if (user?.role === 'ADMIN') {
-      fetchMembers();
-    }
-  }, [user]);
-
-  const fetchMembers = async () => {
-    try {
-      setIsLoading(true);
+  const { user, isAuthenticated, loading, data: members, isLoading, error } = useAdminTable<Member>(
+    async () => {
       const response = await adminAPI.getAllMembers();
-      // 백엔드 응답 구조에 맞게 수정
-      setMembers(response.data?.content || []);
-    } catch (error) {
-      console.error('회원 목록 조회 실패:', error);
-      setError('회원 목록을 불러오는데 실패했습니다.');
-    } finally {
-      setIsLoading(false);
+      // API 응답 구조 검증 및 안전한 데이터 추출
+      return Array.isArray(response?.data?.content) 
+        ? response.data.content 
+        : Array.isArray(response?.data) 
+        ? response.data 
+        : Array.isArray(response) 
+        ? response 
+        : [];
     }
-  };
+  );
 
   // 로딩 중이거나 인증되지 않은 경우 로딩 표시
   if (loading || !isAuthenticated || user?.role !== 'ADMIN') {
-    return (
-      <div className="pb-10">
-        <section className="px-6 py-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-                <p className="mt-4 text-gray-600">로딩 중...</p>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-    );
+    return <AdminLoadingSpinner />;
   }
 
   return (
