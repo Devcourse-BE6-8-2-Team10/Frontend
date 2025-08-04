@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import apiClient from "@/utils/apiClient";
 import { memberAPI } from "@/utils/apiClient";
 
 interface MemberUpdateRequest {
@@ -95,7 +94,7 @@ export default function EditProfile() {
         requestData.newPassword = formData.newPassword;
       }
 
-      await apiClient.patch('/api/members/me', requestData);
+      await memberAPI.updateMemberInfo(requestData);
       
       // 서버에서 최신 사용자 정보 가져오기
       await refreshUserInfo();
@@ -148,48 +147,12 @@ export default function EditProfile() {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
                 <p className="mt-4 text-gray-600">로딩 중...</p>
               </div>
-                      </div>
-        </div>
-      </section>
-
-      {/* 회원 탈퇴 확인 모달 */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border border-gray-200">
-            <h3 className="text-lg font-bold text-red-600 mb-4">회원 탈퇴</h3>
-            <p className="text-gray-700 mb-6">
-              정말로 회원 탈퇴를 하시겠습니까?<br />
-              <br />
-              <strong>탈퇴 시 다음 사항들이 적용됩니다:</strong><br />
-              • 모든 개인정보가 삭제됩니다<br />
-              • 등록한 특허 정보가 삭제됩니다<br />
-              • 찜한 특허 목록이 삭제됩니다<br />
-              • 거래 내역이 삭제됩니다<br />
-              <br />
-              <strong>이 작업은 되돌릴 수 없습니다.</strong>
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-4 py-2 cursor-pointer bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
-                disabled={isDeleting}
-              >
-                취소
-              </button>
-              <button
-                onClick={handleDeleteAccount}
-                className="flex-1 px-4 py-2 cursor-pointer bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                disabled={isDeleting}
-              >
-                {isDeleting ? '처리 중...' : '탈퇴하기'}
-              </button>
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
-}
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="pb-10">

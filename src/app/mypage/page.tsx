@@ -22,7 +22,7 @@ export default function MyPage() {
       // 페이지 로드 시 한 번만 사용자 정보 새로고침
       refreshUserInfo();
     }
-  }, []); // 빈 의존성 배열로 한 번만 실행
+  }, []);
 
 
 

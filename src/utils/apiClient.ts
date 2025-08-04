@@ -126,7 +126,6 @@ export const chatAPI = {
   },
 };
 
-<<<<<<< Updated upstream
 // 특허 관련 API 함수들
 export const patentAPI = {
   // 최근 등록된 특허 목록 조회
@@ -145,7 +144,9 @@ export const patentAPI = {
   getPostFiles: async (postId: number): Promise<any[]> => {
     const response = await apiClient.get(`/api/posts/${postId}/files`);
     return response.data.data || []; // 데이터 구조에 따라 .data를 추가
-=======
+  },
+};
+
 // 회원 관련 API 함수들
 export const memberAPI = {
   // 회원 정보 수정
@@ -166,7 +167,6 @@ export const memberAPI = {
   // 회원 탈퇴
   deleteAccount: async (): Promise<void> => {
     await apiClient.delete('/api/members/me');
->>>>>>> Stashed changes
   },
 };
 
