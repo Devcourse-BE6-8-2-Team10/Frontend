@@ -49,7 +49,7 @@ export const chatAPI = {
   },
 
   // 특정 채팅방 조회
-  getChatRoom: async (roomId: string): Promise<ChatRoom> => {
+  getChatRoom: async (roomId: number): Promise<ChatRoom> => {
     const response = await apiClient.get(`/api/chat/rooms/${roomId}`);
     return response.data;
   },
@@ -64,18 +64,18 @@ export const chatAPI = {
   },
 
   // 채팅방 참여
-  joinChatRoom: async (roomId: string): Promise<void> => {
+  joinChatRoom: async (roomId: number): Promise<void> => {
     await apiClient.post(`/api/chat/rooms/${roomId}/join`);
   },
 
   // 채팅방 나가기
-  leaveChatRoom: async (roomId: string): Promise<void> => {
+  leaveChatRoom: async (roomId: number): Promise<void> => {
     await apiClient.post(`/api/chat/rooms/${roomId}/leave`);
   },
 
   // 채팅 메시지 히스토리 조회
   getChatHistory: async (
-    roomId: string,
+    roomId: number,
     page: number = 0,
     size: number = 50
   ): Promise<{
@@ -85,36 +85,6 @@ export const chatAPI = {
   }> => {
     const response = await apiClient.get(`/api/chat/rooms/${roomId}/messages`, {
       params: { page, size },
-    });
-    return response.data;
-  },
-
-  // 메시지 읽음 처리
-  markMessageAsRead: async (
-    roomId: string,
-    messageId: string
-  ): Promise<void> => {
-    await apiClient.put(`/api/chat/rooms/${roomId}/messages/${messageId}/read`);
-  },
-
-  // 읽지 않은 메시지 수 조회
-  getUnreadMessageCount: async (roomId: string): Promise<number> => {
-    const response = await apiClient.get(
-      `/api/chat/rooms/${roomId}/unread-count`
-    );
-    return response.data;
-  },
-
-  // 사용자별 읽지 않은 메시지 수 조회
-  getAllUnreadMessageCount: async (): Promise<{ [roomId: string]: number }> => {
-    const response = await apiClient.get("/api/chat/unread-counts");
-    return response.data;
-  },
-
-  // 채팅방 검색
-  searchChatRooms: async (query: string): Promise<ChatRoom[]> => {
-    const response = await apiClient.get("/api/chat/rooms/search", {
-      params: { q: query },
     });
     return response.data;
   },

@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import { ChatMessage, ChatRoom, webSocketService } from "../utils/websocket";
 import { useAuth } from "./AuthContext";
+import { getAccessTokenCookie } from "../utils/cookieUtils";
 
 interface ChatState {
   rooms: ChatRoom[];
@@ -24,7 +25,7 @@ interface ChatContextType extends ChatState {
   connectToChat: () => Promise<void>;
   disconnectFromChat: () => void;
   selectRoom: (room: ChatRoom) => void;
-  sendMessage: (content: string) => void;
+  sendMessage: (content: string) => Promise<void>;
   createTestRoom: () => void;
 }
 
@@ -50,28 +51,69 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
-      
+
       await webSocketService.connect(user.email);
-      
-      setState(prev => ({ 
-        ...prev, 
-        isConnected: true, 
+
+      // 수동으로 토큰을 헤더에 추가
+      const token = getAccessTokenCookie();
+      console.log("=== 채팅 연결 디버깅 ===");
+      console.log("토큰 존재 여부:", !!token);
+      console.log("토큰 앞 20자:", token ? token.substring(0, 20) + "..." : "없음");
+      console.log("사용자 정보:", user);
+      console.log("전체 쿠키 문자열:", document.cookie);
+      console.log("accessToken 쿠키 직접 확인:", document.cookie.includes('accessToken'));
+
+      // 모든 쿠키 파싱해서 보기
+      const allCookies = document.cookie.split(';').reduce((cookies, cookie) => {
+        const [name, value] = cookie.split('=').map(c => c.trim());
+        cookies[name] = value;
+        return cookies;
+      }, {} as Record<string, string>);
+      console.log("파싱된 모든 쿠키:", allCookies);
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      console.log("요청 헤더:", headers);
+
+      const response = await fetch('http://localhost:8080/api/chat/rooms/my', {
+        method: 'GET',
+        headers,
+        credentials: 'include' // 쿠키도 함께 전송
+      });
+
+      if (!response.ok) {
+        throw new Error(`채팅방 목록을 불러올 수 없습니다. (${response.status})`);
+      }
+
+      const responseData = await response.json();
+      const roomsData = responseData.data;
+      console.log("서버에서 받은 채팅방 데이터:", roomsData);
+
+      // 서버 응답이 배열인지 확인하고 처리
+      let rooms = [];
+      if (Array.isArray(roomsData)) {
+        rooms = roomsData;
+      } else if (roomsData && Array.isArray(roomsData.data)) {
+        rooms = roomsData.data;
+      } else if (roomsData && roomsData.rooms && Array.isArray(roomsData.rooms)) {
+        rooms = roomsData.rooms;
+      } else {
+        console.warn("서버에서 받은 데이터가 배열 형태가 아닙니다:", roomsData);
+      }
+
+      setState(prev => ({
+        ...prev,
+        isConnected: true,
         isLoading: false,
-        // 테스트용 방 생성
-        rooms: [
-          {
-            id: "test-room-1",
-            name: "일반 채팅방",
-            participants: [user.email]
-          },
-          {
-            id: "test-room-2", 
-            name: "기술 논의",
-            participants: [user.email]
-          }
-        ]
+        rooms: rooms
       }));
-      
+
       console.log("채팅 연결 완료");
     } catch (error) {
       console.error("채팅 연결 실패:", error);
@@ -125,28 +167,49 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, [state.isConnected, state.currentRoom]);
 
   // 메시지 전송
-  const sendMessage = useCallback((content: string) => {
+  const sendMessage = useCallback(async (content: string) => {
+    console.log("=== ChatContext sendMessage 호출 ===");
+    console.log("content:", content);
+    console.log("user:", user);
+    console.log("currentRoom:", state.currentRoom);
+    console.log("isConnected:", state.isConnected);
+
     if (!user || !state.currentRoom || !state.isConnected) {
-      console.error("메시지 전송 조건이 맞지 않습니다.");
-      return;
+      console.error("❌ 메시지 전송 조건이 맞지 않습니다.");
+      console.error("user:", user);
+      console.error("currentRoom:", state.currentRoom);
+      console.error("isConnected:", state.isConnected);
+      throw new Error("메시지 전송 조건이 맞지 않습니다.");
     }
 
-    const message: Omit<ChatMessage, "id" | "timestamp"> = {
-      senderId: user.id,
-      senderName: user.name,
-      content,
-      roomId: state.currentRoom.id,
-    };
+    try {
+      const message: Omit<ChatMessage, "id" | "timestamp"> = {
+        senderId: user.id,
+        senderName: user.name,
+        content,
+        senderEmail: user.email,
+        roomId: state.currentRoom.id,
+      };
 
-    webSocketService.sendMessage(state.currentRoom.id, message);
+      console.log("생성된 message 객체:", message);
+
+      // WebSocket으로 메시지 전송 (백엔드에서 저장 및 분배 처리)
+      console.log("webSocketService.sendMessage 호출...");
+      webSocketService.sendMessage(state.currentRoom.id, message);
+
+      console.log("✅ 메시지 전송 완료");
+    } catch (error) {
+      console.error("❌ 메시지 전송 실패:", error);
+      throw error;
+    }
   }, [user, state.currentRoom, state.isConnected]);
 
   // 테스트용 방 생성
   const createTestRoom = useCallback(() => {
     if (!user) return;
-    
+
     const newRoom: ChatRoom = {
-      id: `test-room-${Date.now()}`,
+      id: Date.now(), // 임시 ID, 실제로는 서버에서 생성된 ID 사용
       name: `새 채팅방 ${new Date().toLocaleTimeString()}`,
       participants: [user.email]
     };

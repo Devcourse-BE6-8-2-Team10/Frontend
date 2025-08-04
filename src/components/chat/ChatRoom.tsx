@@ -35,9 +35,22 @@ export default function ChatRoom() {
   // 메시지 전송
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("=== 메시지 전송 시도 ===");
+    console.log("messageInput:", messageInput);
+    console.log("isConnected:", isConnected);
+    console.log("currentRoom:", currentRoom);
+    console.log("user:", user);
+
     if (messageInput.trim()) {
-      sendMessage(messageInput.trim());
-      setMessageInput("");
+      console.log("sendMessage 호출 중...");
+      sendMessage(messageInput.trim()).then(() => {
+        console.log("sendMessage 완료");
+        setMessageInput("");
+      }).catch((error) => {
+        console.error("sendMessage 에러:", error);
+      });
+    } else {
+      console.log("메시지가 비어있음");
     }
   };
 
@@ -96,6 +109,37 @@ export default function ChatRoom() {
               방 생성
             </button>
           </div>
+
+          {/* 테스트용 1:1 채팅 버튼들 */}
+          <div className="flex gap-1 mt-2">
+            <button
+              onClick={() => {
+                const testRoom = {
+                  id: 4,
+                  name: "User1과 User2의 채팅",
+                  participants: ["user1@user.com", "test1@user.com"]
+                };
+                selectRoom(testRoom);
+              }}
+              className="flex-1 px-2 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-xs"
+            >
+              테스트채팅1
+            </button>
+
+            <button
+              onClick={() => {
+                const testRoom = {
+                  id: 2,
+                  name: "구매자-판매자 채팅",
+                  participants: [user.email, "seller@test.com"]
+                };
+                selectRoom(testRoom);
+              }}
+              className="flex-1 px-2 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600 text-xs"
+            >
+              테스트채팅2
+            </button>
+          </div>
         </div>
 
         {/* 에러 메시지 */}
@@ -107,7 +151,7 @@ export default function ChatRoom() {
 
         {/* 채팅방 목록 */}
         <div className="flex-1 overflow-y-auto">
-          {rooms.map((room) => (
+          {Array.isArray(rooms) && rooms.map((room) => (
             <div
               key={room.id}
               onClick={() => selectRoom(room)}
@@ -116,11 +160,10 @@ export default function ChatRoom() {
               }`}
             >
               <h3 className="font-medium text-gray-800">{room.name}</h3>
-              <p className="text-sm text-gray-500">{room.participants.length}명 참여</p>
             </div>
           ))}
 
-          {rooms.length === 0 && isConnected && (
+          {(!Array.isArray(rooms) || rooms.length === 0) && isConnected && (
             <div className="p-4 text-center text-gray-500">
               <p>채팅방이 없습니다.</p>
               <p className="text-sm">방 생성 버튼을 눌러보세요!</p>
