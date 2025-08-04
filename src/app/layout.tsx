@@ -21,7 +21,7 @@ export default function RootLayout({
     <html lang="ko">
       <body className={inter.className}>
         <AuthProvider>
-          <div className="min-h-screen bg-gradient-to-b from-[#2a4fa2] via-[#1a365d] to-[#1a365d] flex flex-col">
+          <div className="min-h-screen bg-[#2A5298] flex flex-col">
             {/* Header */}
             <Header />
 
