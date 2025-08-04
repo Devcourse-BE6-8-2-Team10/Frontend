@@ -117,4 +117,27 @@ export const patentAPI = {
   },
 };
 
+// 회원 관련 API 함수들
+export const memberAPI = {
+  // 회원 정보 수정
+  updateMemberInfo: async (data: {
+    name: string;
+    currentPassword?: string;
+    newPassword?: string;
+  }): Promise<void> => {
+    await apiClient.patch('/api/members/me', data);
+  },
+
+  // 마이페이지 정보 조회
+  getMyPageInfo: async (): Promise<any> => {
+    const response = await apiClient.get('/api/members/me');
+    return response.data;
+  },
+
+  // 회원 탈퇴
+  deleteAccount: async (): Promise<void> => {
+    await apiClient.delete('/api/members/me');
+  },
+};
+
 export default apiClient;
