@@ -28,6 +28,7 @@ interface ChatContextType extends ChatState {
   selectRoom: (room: ChatRoom) => void;
   sendMessage: (content: string) => Promise<void>;
   createTestRoom: () => void;
+  ensureConnected: () => Promise<void>; // 연결 보장 함수 추가
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -140,6 +141,35 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       }));
     }
   }, [user, isAuthenticated]);
+
+  // 연결 보장 함수 - 필요시 자동 연결
+  const ensureConnected = useCallback(async () => {
+    console.log("=== WebSocket 연결 확인 ===");
+    console.log("현재 연결 상태:", state.isConnected);
+    console.log("사용자 인증 상태:", isAuthenticated);
+    console.log("로딩 상태:", state.isLoading);
+
+    if (!isAuthenticated || !user) {
+      throw new Error("로그인이 필요합니다.");
+    }
+
+    if (!state.isConnected && !state.isLoading) {
+      console.log("WebSocket 연결되지 않음 - 자동 연결 시도");
+      await connectToChat();
+    } else if (state.isConnected) {
+      console.log("이미 WebSocket에 연결되어 있음");
+    } else {
+      console.log("연결 중이므로 대기");
+    }
+  }, [isAuthenticated, user, state.isConnected, state.isLoading, connectToChat]);
+
+  // 채팅 페이지 접속 시 자동 WebSocket 연결
+  useEffect(() => {
+    if (isAuthenticated && user && !state.isConnected && !state.isLoading && !state.error) {
+      console.log("채팅 페이지 접속 - 자동 연결 시도");
+      connectToChat();
+    }
+  }, [isAuthenticated, user, state.isConnected, state.isLoading, state.error, connectToChat]);
 
   // WebSocket 연결 해제
   const disconnectFromChat = useCallback(() => {
@@ -276,6 +306,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     selectRoom,
     sendMessage,
     createTestRoom,
+    ensureConnected, // 연결 보장 함수 추가
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

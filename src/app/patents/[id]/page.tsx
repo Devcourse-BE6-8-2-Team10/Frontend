@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '@/utils/apiClient';
 import { useAuth } from '@/contexts/AuthContext';
+import { useChat } from '@/contexts/ChatContext';
 import { useParams, useRouter } from 'next/navigation';
 
 interface FileUploadResponse {
@@ -90,6 +91,7 @@ const fetchFiles = async (postId: string) => {
 
 export default function PatentDetailPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const { ensureConnected } = useChat(); // 연결 보장 함수 추가
   const router = useRouter();
   const params = useParams();
   const postId = params.id;
@@ -151,6 +153,10 @@ export default function PatentDetailPage() {
     setIsCreatingRoom(true);
 
     try {
+      // WebSocket 연결 확인 및 자동 연결
+      console.log("구매 문의 - WebSocket 연결 확인");
+      await ensureConnected();
+
       // 백엔드 API 호출하여 채팅방 생성 또는 기존 채팅방 ID 반환
       const response = await apiClient.post(`/api/chat/rooms/${post.id}`);
       

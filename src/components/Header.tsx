@@ -1,11 +1,13 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useChat } from '@/contexts/ChatContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 const Header = () => {
   const { isAuthenticated, user, logout, loading } = useAuth();
+  const { ensureConnected } = useChat();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -15,6 +17,25 @@ const Header = () => {
     } catch (error) {
       console.error('로그아웃 실패:', error);
       router.push('/');
+    }
+  };
+
+  const handleChatClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    if (!isAuthenticated) {
+      router.push('/login');
+      return;
+    }
+
+    try {
+      console.log("헤더 채팅 버튼 클릭 - WebSocket 연결 확인");
+      await ensureConnected();
+      router.push('/chat');
+    } catch (error) {
+      console.error('채팅 연결 실패:', error);
+      // 연결 실패해도 채팅 페이지로 이동 (페이지에서 재시도 가능)
+      router.push('/chat');
     }
   };
 
@@ -63,9 +84,12 @@ const Header = () => {
               <Link href="/patents/register" className="hover:text-indigo-500 transition-colors">
                 특허등록
               </Link>
-              <Link href="/chat" className="hover:text-indigo-500 transition-colors">
+              <button
+                onClick={handleChatClick}
+                className="hover:text-indigo-500 transition-colors cursor-pointer"
+              >
                 채팅
-              </Link>
+              </button>
               <Link href="/mypage" className="hover:text-indigo-500 transition-colors">
                 마이페이지
               </Link>
