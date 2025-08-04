@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -32,7 +32,7 @@ export function useAdminTable<T>(
     }
   }, [user, requiredRole]);
 
-  const fetchDataHandler = async () => {
+  const fetchDataHandler = useCallback(async () => {
     try {
       setIsLoading(true);
       setError("");
@@ -70,7 +70,7 @@ export function useAdminTable<T>(
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [fetchData]);
 
   return { 
     user, 
