@@ -21,8 +21,9 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_BACKEND_URL: "http://localhost:8080",
     NEXT_PUBLIC_WEBSOCKET_URL: "http://localhost:8080/chat",
-    // NEXT_PUBLIC_BACKEND_URL: "https://your-production-backend.com", 
-    // NEXT_PUBLIC_WEBSOCKET_URL: "wss://your-production-backend.com/chat",
+    // 백엔드 주소
+    // NEXT_PUBLIC_BACKEND_URL: "http://34.64.160.179:8080",
+    // NEXT_PUBLIC_WEBSOCKET_URL: "ws://34.64.160.179:8080/chat",
   },
   // WebSocket 연결을 위한 설정
   async headers() {
