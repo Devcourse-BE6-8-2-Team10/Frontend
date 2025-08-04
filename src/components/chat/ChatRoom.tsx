@@ -115,7 +115,7 @@ export default function ChatRoom() {
             <button
               onClick={() => {
                 const testRoom = {
-                  id: 4,
+                  id: -1, // 음수로 변경하여 실제 채팅방 ID와 충돌 방지
                   name: "User1과 User2의 채팅",
                   participants: ["user1@user.com", "test1@user.com"]
                 };
@@ -129,7 +129,7 @@ export default function ChatRoom() {
             <button
               onClick={() => {
                 const testRoom = {
-                  id: 2,
+                  id: -2, // 음수로 변경하여 실제 채팅방 ID와 충돌 방지
                   name: "구매자-판매자 채팅",
                   participants: [user.email, "seller@test.com"]
                 };

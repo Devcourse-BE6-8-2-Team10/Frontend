@@ -99,6 +99,7 @@ export default function PatentDetailPage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [likeLoading, setLikeLoading] = useState(false);
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
 
   useEffect(() => {
     if (!authLoading) {
@@ -132,6 +133,60 @@ export default function PatentDetailPage() {
       }
     }
   }, [authLoading, isAuthenticated, router, postId]);
+
+  // 구매 문의 기능
+  const handlePurchaseInquiry = async () => {
+    if (!isAuthenticated) {
+      alert('로그인이 필요합니다.');
+      router.push('/login');
+      return;
+    }
+
+    // 이미 채팅방 생성 중이면 중복 호출 방지
+    if (isCreatingRoom) {
+      console.log('이미 채팅방 생성 중입니다.');
+      return;
+    }
+
+    setIsCreatingRoom(true);
+
+    try {
+      // 백엔드 API 호출하여 채팅방 생성 또는 기존 채팅방 ID 반환
+      const response = await apiClient.post(`/api/chat/rooms/${post.id}`);
+      
+      if (response.data.resultCode === "200") {
+        const chatRoomId = response.data.data;
+        console.log("채팅방 ID:", chatRoomId);
+        
+        // 채팅 페이지로 이동하면서 roomId를 쿼리 파라미터로 전달
+        router.push(`/chat?roomId=${chatRoomId}`);
+      } else {
+        alert('채팅방 생성에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('채팅방 생성 실패:', error);
+      if (error.response?.data?.msg?.includes('이미 존재')) {
+        // 이미 채팅방이 존재하는 에러인 경우, 기존 채팅방을 찾아서 이동
+        try {
+          const roomsResponse = await apiClient.get('/api/chat/rooms/my');
+          const rooms = roomsResponse.data.data;
+          // 해당 게시글과 관련된 채팅방 찾기 (임시로 가장 최근 채팅방으로 이동)
+          if (rooms && rooms.length > 0) {
+            router.push(`/chat?roomId=${rooms[0].id}`);
+          } else {
+            alert('채팅방을 찾을 수 없습니다.');
+          }
+        } catch (findError) {
+          console.error('채팅방 조회 실패:', findError);
+          alert('채팅방 생성에 실패했습니다.');
+        }
+      } else {
+        alert('채팅방 생성에 실패했습니다.');
+      }
+    } finally {
+      setIsCreatingRoom(false);
+    }
+  };
 
   // 찜 등록/해제 기능
   const toggleLike = async () => {
@@ -324,8 +379,12 @@ export default function PatentDetailPage() {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
-              <button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors flex-1">
-                구매 문의
+              <button 
+                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handlePurchaseInquiry}
+                disabled={isCreatingRoom}
+              >
+                {isCreatingRoom ? '채팅방 생성 중...' : '구매 문의'}
               </button>
               <button
                 className="border border-purple-600 text-purple-600 hover:bg-purple-600 hover:text-white px-6 py-3 rounded-lg transition-colors flex-1"
