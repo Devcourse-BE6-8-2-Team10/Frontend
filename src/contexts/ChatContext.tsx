@@ -12,12 +12,14 @@ import { useSearchParams } from "next/navigation";
 import { ChatMessage, ChatRoom, webSocketService } from "../utils/websocket";
 import { useAuth } from "./AuthContext";
 import { getAccessTokenCookie } from "../utils/cookieUtils";
+import { chatAPI } from "../utils/apiClient";
 
 // 상태 구조 변경 - 방별 메시지 저장
 interface ChatState {
   rooms: ChatRoom[];
   currentRoom: ChatRoom | null;
   messagesByRoom: { [roomId: number]: ChatMessage[] }; // 방별 메시지 저장
+  unreadCounts: { [roomId: number]: number }; // 읽지 않은 메시지 수
   isConnected: boolean;
   isLoading: boolean;
   error: string | null;
@@ -31,6 +33,7 @@ interface ChatContextType extends ChatState {
   createTestRoom: () => void;
   ensureConnected: () => Promise<void>;
   getCurrentRoomMessages: () => ChatMessage[]; // 현재 방 메시지 가져오기
+  deleteChatRoom: (roomId: number) => Promise<void>; // 채팅방 삭제
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -42,6 +45,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     rooms: [],
     currentRoom: null,
     messagesByRoom: {}, // 🔥 빈 객체로 초기화
+    unreadCounts: {}, // 읽지 않은 메시지 수 초기화
     isConnected: false,
     isLoading: false,
     error: null,
@@ -346,6 +350,38 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }));
   }, [user]);
 
+  // 채팅방 삭제
+  const deleteChatRoom = useCallback(async (roomId: number) => {
+    try {
+      console.log(`채팅방 삭제 시작: ${roomId}`);
+      
+      // 현재 선택된 방이 삭제되는 방인 경우 구독 해제
+      if (state.currentRoom && state.currentRoom.id === roomId) {
+        webSocketService.unsubscribeFromChatRoom(roomId);
+      }
+      
+      // 서버에 삭제 요청
+      await chatAPI.deleteChatRoom(roomId);
+      
+      // 로컬 상태에서 채팅방 제거
+      setState(prev => ({
+        ...prev,
+        rooms: prev.rooms.filter(room => room.id !== roomId),
+        // 현재 방이 삭제된 방이면 null로 설정
+        currentRoom: prev.currentRoom?.id === roomId ? null : prev.currentRoom,
+        // 해당 방의 메시지도 제거
+        messagesByRoom: Object.fromEntries(
+          Object.entries(prev.messagesByRoom).filter(([id]) => Number(id) !== roomId)
+        )
+      }));
+      
+      console.log(`채팅방 삭제 완료: ${roomId}`);
+    } catch (error) {
+      console.error('채팅방 삭제 실패:', error);
+      throw error;
+    }
+  }, [state.currentRoom]);
+
   // URL 파라미터로 전달된 roomId 처리 - 단순화
   useEffect(() => {
     const roomIdFromUrl = searchParams.get('roomId');
@@ -376,6 +412,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     createTestRoom,
     ensureConnected,
     getCurrentRoomMessages, // 새로운 함수 추가
+    deleteChatRoom, // 채팅방 삭제 함수 추가
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

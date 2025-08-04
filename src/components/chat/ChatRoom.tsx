@@ -16,7 +16,8 @@ export default function ChatRoom() {
     selectRoom,
     sendMessage,
     createTestRoom,
-    getCurrentRoomMessages
+    getCurrentRoomMessages,
+    deleteChatRoom
   } = useChat();
 
   const { user, isAuthenticated } = useAuth();
@@ -24,6 +25,20 @@ export default function ChatRoom() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const messages = getCurrentRoomMessages();
+
+  // 채팅방 삭제 함수
+  const handleDeleteRoom = async (roomId: number, e: React.MouseEvent) => {
+    e.stopPropagation(); // 채팅방 선택 이벤트 방지
+    
+    if (confirm('채팅방에서 나가시겠습니까? 채팅 기록이 모두 사라집니다.')) {
+      try {
+        await deleteChatRoom(roomId);
+      } catch (error) {
+        console.error('채팅방 삭제 실패:', error);
+        alert('채팅방 삭제에 실패했습니다.');
+      }
+    }
+  };
 
   // 메시지 목록 스크롤을 맨 아래로
   const scrollToBottom = () => {
@@ -100,11 +115,40 @@ export default function ChatRoom() {
             <div
               key={room.id}
               onClick={() => selectRoom(room)}
-              className={`p-4 cursor-pointer border-b border-gray-100 hover:bg-gray-50 ${
+              className={`p-4 cursor-pointer border-b border-gray-100 hover:bg-gray-50 relative group ${
                 currentRoom?.id === room.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
               }`}
             >
-              <h3 className="font-medium text-gray-800">{room.name}</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-medium text-gray-800 flex-1">{room.name}</h3>
+                {/* 삭제 버튼 - 인라인 스타일로 확실히 보이게 */}
+                <button
+                  onClick={(e) => handleDeleteRoom(room.id, e)}
+                  style={{
+                    padding: '4px',
+                    color: '#999',
+                    backgroundColor: 'transparent',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    marginLeft: '8px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#ef4444';
+                    e.currentTarget.style.backgroundColor = '#fef2f2';
+                    e.currentTarget.style.borderColor = '#ef4444';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = '#999';
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.borderColor = '#ddd';
+                  }}
+                  title="채팅방 나가기"
+                >
+                  🗑️
+                </button>
+              </div>
             </div>
           ))}
 
