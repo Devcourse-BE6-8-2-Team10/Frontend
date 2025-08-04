@@ -7,8 +7,8 @@ export interface ChatMessage {
   senderName: string;
   content: string;
   timestamp: string;
-  roomId: string;
-  email : string;
+  roomId: number;
+  senderEmail : string;
 }
 
 export interface ChatRoom {
@@ -20,7 +20,7 @@ export interface ChatRoom {
 
 class WebSocketService {
   private client: Client | null = null;
-  private subscriptions: Map<string, StompSubscription> = new Map();
+  private subscriptions: Map<number, StompSubscription> = new Map();
   private isConnected: boolean = false;
 
   // WebSocket 연결
@@ -85,7 +85,7 @@ class WebSocketService {
 
   // 채팅방 구독
   public subscribeToChatRoom(
-    roomId: string,
+    roomId: number,
     onMessage: (message: ChatMessage) => void
   ): void {
     if (!this.client || !this.isConnected) {
@@ -113,7 +113,7 @@ class WebSocketService {
   }
 
   // 채팅방 구독 해제
-  public unsubscribeFromChatRoom(roomId: string): void {
+  public unsubscribeFromChatRoom(roomId: number): void {
     const subscription = this.subscriptions.get(roomId);
     if (subscription) {
       subscription.unsubscribe();
@@ -124,7 +124,7 @@ class WebSocketService {
 
   // 메시지 전송
   public sendMessage(
-    roomId: string,
+    roomId: number,
     message: Omit<ChatMessage, "id" | "timestamp">
   ): void {
     console.log("=== WebSocket sendMessage 호출 ===");
@@ -144,7 +144,7 @@ class WebSocketService {
     const messageDto = {
       senderId: Number(message.senderId),
       senderName: message.senderName,
-      senderEmail: message.email, // 필요하면 추가
+      senderEmail: message.senderEmail,
       content: message.content,
       chatRoomId: roomId
     };

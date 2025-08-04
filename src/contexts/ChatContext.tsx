@@ -209,7 +209,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     const newRoom: ChatRoom = {
-      id: `test-room-${Date.now()}`,
+      id: Date.now(), // 임시 ID, 실제로는 서버에서 생성된 ID 사용
       name: `새 채팅방 ${new Date().toLocaleTimeString()}`,
       participants: [user.email]
     };
