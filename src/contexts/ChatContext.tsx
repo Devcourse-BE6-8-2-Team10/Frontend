@@ -13,10 +13,11 @@ import { ChatMessage, ChatRoom, webSocketService } from "../utils/websocket";
 import { useAuth } from "./AuthContext";
 import { getAccessTokenCookie } from "../utils/cookieUtils";
 
+// 상태 구조 변경 - 방별 메시지 저장
 interface ChatState {
   rooms: ChatRoom[];
   currentRoom: ChatRoom | null;
-  messages: ChatMessage[];
+  messagesByRoom: { [roomId: number]: ChatMessage[] }; // 방별 메시지 저장
   isConnected: boolean;
   isLoading: boolean;
   error: string | null;
@@ -28,7 +29,8 @@ interface ChatContextType extends ChatState {
   selectRoom: (room: ChatRoom) => void;
   sendMessage: (content: string) => Promise<void>;
   createTestRoom: () => void;
-  ensureConnected: () => Promise<void>; // 연결 보장 함수 추가
+  ensureConnected: () => Promise<void>;
+  getCurrentRoomMessages: () => ChatMessage[]; // 현재 방 메시지 가져오기
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -39,11 +41,62 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ChatState>({
     rooms: [],
     currentRoom: null,
-    messages: [],
+    messagesByRoom: {}, // 🔥 빈 객체로 초기화
     isConnected: false,
     isLoading: false,
     error: null,
   });
+
+  // 메시지 로드 함수 추가
+  const loadChatRoomMessages = useCallback(async (roomId: number) => {
+    try {
+      console.log(`채팅방 ${roomId} 메시지 로드 시작`);
+
+      const token = getAccessTokenCookie();
+      const response = await fetch(`http://localhost:8080/api/chat/rooms/${roomId}/messages`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`메시지 로드 실패: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+      const messages = responseData.data || [];
+
+      console.log(`채팅방 ${roomId} 메시지 로드 완료:`, messages.length, '개');
+
+      // 방별 메시지 저장
+      setState(prev => ({
+        ...prev,
+        messagesByRoom: {
+          ...prev.messagesByRoom,
+          [roomId]: messages
+        }
+      }));
+
+    } catch (error) {
+      console.error(`채팅방 ${roomId} 메시지 로드 실패:`, error);
+      // 실패해도 빈 배열로 초기화
+      setState(prev => ({
+        ...prev,
+        messagesByRoom: {
+          ...prev.messagesByRoom,
+          [roomId]: []
+        }
+      }));
+    }
+  }, []);
+
+  // 현재 방의 메시지를 가져오는 함수
+  const getCurrentRoomMessages = useCallback(() => {
+    return state.currentRoom ? state.messagesByRoom[state.currentRoom.id] || [] : [];
+  }, [state.currentRoom, state.messagesByRoom]);
 
   // WebSocket 연결
   const connectToChat = useCallback(async () => {
@@ -179,54 +232,64 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       ...prev,
       isConnected: false,
       currentRoom: null,
-      messages: []
+      messagesByRoom: {} // 모든 메시지 캐시 초기화
     }));
   }, []);
 
-  // 채팅방 선택
-  const selectRoom = useCallback((room: ChatRoom) => {
+  //  채팅방 선택 - 구독 해제를 setState 밖으로 이동
+  const selectRoom = useCallback(async (room: ChatRoom) => {
     console.log("selectRoom 호출:", room.name, "ID:", room.id);
 
-    setState(prev => {
-      if (!prev.isConnected) {
-        console.error("WebSocket이 연결되지 않았습니다.");
-        return prev;
-      }
+    // 연결 상태 체크 (setState 밖에서)
+    if (!state.isConnected) {
+      console.error("WebSocket이 연결되지 않았습니다.");
+      return;
+    }
 
-      // 같은 방을 다시 선택하는 경우 무시
-      if (prev.currentRoom && prev.currentRoom.id === room.id) {
-        console.log("이미 선택된 방입니다.");
-        return prev;
-      }
+    // 같은 방 체크 (setState 밖에서)
+    if (state.currentRoom && state.currentRoom.id === room.id) {
+      console.log("이미 선택된 방입니다.");
+      return;
+    }
 
-      if (prev.currentRoom) {
-        webSocketService.unsubscribeFromChatRoom(prev.currentRoom.id);
-        console.log(`이전 채팅방 ${prev.currentRoom.id} 구독 해제`);
-      }
+    // 이전 방 구독 해제 (setState 밖에서)
+    if (state.currentRoom) {
+      webSocketService.unsubscribeFromChatRoom(state.currentRoom.id);
+      console.log(`이전 채팅방 ${state.currentRoom.id} 구독 해제`);
+    }
 
-      console.log(`새 채팅방 ${room.id} 구독 시작`);
-      webSocketService.subscribeToChatRoom(room.id, (message) => {
-        console.log("ChatContext에서 메시지 수신:", message);
-        setState(prevState => {
-          console.log("메시지를 상태에 추가:", message.content);
-          return {
-            ...prevState,
-            messages: [...prevState.messages, message]
-          };
-        });
+    // 새 방 구독 시작 (setState 밖에서)
+    console.log(`새 채팅방 ${room.id} 구독 시작`);
+    webSocketService.subscribeToChatRoom(room.id, (message) => {
+      console.log("ChatContext에서 메시지 수신:", message);
+      setState(prevState => {
+        return {
+          ...prevState,
+          messagesByRoom: {
+            ...prevState.messagesByRoom,
+            [room.id]: [...(prevState.messagesByRoom[room.id] || []), message]
+          }
+        };
       });
-
-      console.log(`방 선택 완료: ${room.name}`);
-
-      return {
-        ...prev,
-        currentRoom: room,
-        messages: [] // 새 방 선택시 메시지 초기화
-      };
     });
-  }, []);
 
-  // 메시지 전송
+    // 상태 업데이트 (순수하게 상태만 변경)
+    setState(prev => ({
+      ...prev,
+      currentRoom: room
+    }));
+
+    // 해당 방의 메시지가 없으면 로드
+    if (!state.messagesByRoom[room.id]) {
+      console.log(`채팅방 ${room.id} 메시지 히스토리 로드 시작`);
+      await loadChatRoomMessages(room.id);
+    } else {
+      console.log(`채팅방 ${room.id} 메시지 캐시 존재 (${state.messagesByRoom[room.id].length}개)`);
+    }
+
+  }, [state.isConnected, state.currentRoom, state.messagesByRoom, loadChatRoomMessages]);
+
+  // 메시지 전송 - 방별 메시지에 반영
   const sendMessage = useCallback(async (content: string) => {
     console.log("=== ChatContext sendMessage 호출 ===");
     console.log("content:", content);
@@ -311,7 +374,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     selectRoom,
     sendMessage,
     createTestRoom,
-    ensureConnected, // 연결 보장 함수 추가
+    ensureConnected,
+    getCurrentRoomMessages, // 새로운 함수 추가
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

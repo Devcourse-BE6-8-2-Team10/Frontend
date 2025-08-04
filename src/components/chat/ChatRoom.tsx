@@ -8,7 +8,6 @@ export default function ChatRoom() {
   const {
     rooms,
     currentRoom,
-    messages,
     isConnected,
     isLoading,
     error,
@@ -16,12 +15,15 @@ export default function ChatRoom() {
     disconnectFromChat,
     selectRoom,
     sendMessage,
-    createTestRoom
+    createTestRoom,
+    getCurrentRoomMessages
   } = useChat();
 
   const { user, isAuthenticated } = useAuth();
   const [messageInput, setMessageInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const messages = getCurrentRoomMessages();
 
   // 메시지 목록 스크롤을 맨 아래로
   const scrollToBottom = () => {
