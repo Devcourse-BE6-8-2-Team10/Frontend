@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import apiClient from '@/utils/apiClient';
 import { 
   getRefreshTokenCookie, 
@@ -23,6 +23,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (userData: User, accessToken: string, refreshToken: string) => void;
   logout: () => void;
+  updateUser: (userData: Partial<User>) => void;
+  refreshUserInfo: () => Promise<void>;
   loading: boolean;
   accessToken: string | null;
 }
@@ -65,7 +67,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // 사용자 정보를 서버에서 가져오는 함수
-  const fetchUserInfo = async () => {
+  const fetchUserInfo = useCallback(async () => {
     try {
       const response = await apiClient.get('/api/auth/me');
       
@@ -88,7 +90,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Failed to fetch user info:', error);
       return null;
     }
-  };
+  }, []);
 
   // 토큰 갱신 함수
   const refreshAccessToken = async (refreshToken: string): Promise<string | null> => {
@@ -186,11 +188,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const updateUser = (userData: Partial<User>) => {
+    if (user) {
+      setUser({ ...user, ...userData });
+    }
+  };
+
+  // 서버에서 최신 사용자 정보를 다시 가져오는 함수
+  const refreshUserInfo = useCallback(async () => {
+    const userData = await fetchUserInfo();
+    if (userData) {
+      setUser(userData);
+    }
+  }, [fetchUserInfo]);
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
     login,
     logout,
+    updateUser,
+    refreshUserInfo,
     loading,
     accessToken,
   };

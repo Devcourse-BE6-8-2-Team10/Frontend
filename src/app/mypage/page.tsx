@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function MyPage() {
-  const { user, isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading, refreshUserInfo } = useAuth();
   const router = useRouter();
 
   // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
@@ -15,6 +15,16 @@ export default function MyPage() {
       router.push('/login');
     }
   }, [isAuthenticated, loading, router]);
+
+  // 페이지 로드 시 한 번만 사용자 정보 새로고침
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      // 페이지 로드 시 한 번만 사용자 정보 새로고침
+      refreshUserInfo();
+    }
+  }, []); // 빈 의존성 배열로 한 번만 실행
+
+
 
   // 로딩 중이거나 인증되지 않은 경우 로딩 표시
   if (loading || !isAuthenticated) {
@@ -42,14 +52,22 @@ export default function MyPage() {
           
           {/* User Info Card */}
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 mb-6 shadow-xl">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="bg-purple-100 rounded-full w-12 h-12 flex items-center justify-center">
-                <span className="text-purple-600 text-xl">👤</span>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <div className="bg-purple-100 rounded-full w-12 h-12 flex items-center justify-center">
+                  <span className="text-purple-600 text-xl">👤</span>
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-[#1a365d]">{user?.name || '사용자'}</h2>
+                  <p className="text-gray-600 text-sm">{user?.email || '이메일 없음'}</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-lg font-bold text-[#1a365d]">{user?.name || '사용자'}</h2>
-                <p className="text-gray-600 text-sm">{user?.email || '이메일 없음'}</p>
-              </div>
+                             <button 
+                 onClick={() => router.push('/mypage/edit')}
+                 className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors cursor-pointer text-sm"
+               >
+                 개인정보 수정
+               </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
               <div className="bg-gray-50 rounded-lg p-4">
@@ -115,47 +133,53 @@ export default function MyPage() {
             </div>
           </div>
           
-          {/* Liked Patents Section */}
-          <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
-            <h3 className="text-lg font-bold text-[#1a365d] mb-4">찜한 특허</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Liked Patent Card 1 */}
-              <div className="border border-gray-200 rounded-xl p-4 bg-white/50">
-                <div className="bg-pink-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">
-                  <span className="text-pink-600 text-lg">🔊</span>
-                </div>
-                <h4 className="font-bold text-[#1a365d] mb-2 text-sm">AI 기반 음성인식 알고리즘</h4>
-                <p className="text-gray-600 text-xs mb-3">혁신적인 음성인식 기술</p>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-base text-[#1a365d]">₩15,000,000</span>
-                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">판매중</span>
-                </div>
-                <div className="flex gap-2">
-                  <button className="text-purple-600 hover:text-purple-700 text-sm">구매문의</button>
-                  <button className="text-red-600 hover:text-red-700 text-sm">찜해제</button>
-                </div>
-              </div>
-              
-              {/* Liked Patent Card 2 */}
-              <div className="border border-gray-200 rounded-xl p-4 bg-white/50">
-                <div className="bg-purple-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">
-                  <span className="text-purple-600 text-lg">🌱</span>
-                </div>
-                <h4 className="font-bold text-[#1a365d] mb-2 text-sm">친환경 플라스틱 대체 기술</h4>
-                <p className="text-gray-600 text-xs mb-3">생분해성 소재 기술</p>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-base text-[#1a365d]">₩12,000,000</span>
-                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">판매중</span>
-                </div>
-                <div className="flex gap-2">
-                  <button className="text-purple-600 hover:text-purple-700 text-sm">구매문의</button>
-                  <button className="text-red-600 hover:text-red-700 text-sm">찜해제</button>
-                </div>
-              </div>
-            </div>
-          </div>
+                     {/* Liked Patents Section */}
+           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl relative">
+             <h3 className="text-lg font-bold text-[#1a365d] mb-4">찜한 특허</h3>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+               {/* Liked Patent Card 1 */}
+               <div className="border border-gray-200 rounded-xl p-4 bg-white/50">
+                 <div className="bg-pink-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">
+                   <span className="text-pink-600 text-lg">🔊</span>
+                 </div>
+                 <h4 className="font-bold text-[#1a365d] mb-2 text-sm">AI 기반 음성인식 알고리즘</h4>
+                 <p className="text-gray-600 text-xs mb-3">혁신적인 음성인식 기술</p>
+                 <div className="flex justify-between items-center mb-2">
+                   <span className="font-bold text-base text-[#1a365d]">₩15,000,000</span>
+                   <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">판매중</span>
+                 </div>
+                 <div className="flex gap-2">
+                   <button className="text-purple-600 hover:text-purple-700 text-sm">구매문의</button>
+                   <button className="text-red-600 hover:text-red-700 text-sm">찜해제</button>
+                 </div>
+               </div>
+               
+               {/* Liked Patent Card 2 */}
+               <div className="border border-gray-200 rounded-xl p-4 bg-white/50">
+                 <div className="bg-purple-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">
+                   <span className="text-purple-600 text-lg">🌱</span>
+                 </div>
+                 <h4 className="font-bold text-[#1a365d] mb-2 text-sm">친환경 플라스틱 대체 기술</h4>
+                 <p className="text-gray-600 text-xs mb-3">생분해성 소재 기술</p>
+                 <div className="flex justify-between items-center mb-2">
+                   <span className="font-bold text-base text-[#1a365d]">₩12,000,000</span>
+                   <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">판매중</span>
+                 </div>
+                 <div className="flex gap-2">
+                   <button className="text-purple-600 hover:text-purple-700 text-sm">구매문의</button>
+                   <button className="text-red-600 hover:text-red-700 text-sm">찜해제</button>
+                 </div>
+               </div>
+             </div>
+             
+             
+           </div>
         </div>
       </section>
+
+      
+
+      
     </div>
   );
 }
