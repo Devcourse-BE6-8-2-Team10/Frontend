@@ -8,7 +8,6 @@ import React, {
   useCallback,
   ReactNode,
 } from "react";
-import { useSearchParams } from "next/navigation";
 import { ChatMessage, ChatRoom, webSocketService } from "../utils/websocket";
 import { useAuth } from "./AuthContext";
 import { getAccessTokenCookie } from "../utils/cookieUtils";
@@ -71,7 +70,6 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth();
-  const searchParams = useSearchParams();
   const [state, setState] = useState<ChatState>({
     rooms: [],
     currentRoom: null,
@@ -649,20 +647,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       throw error;
     }
   }, [state.currentRoom]);
-
-  // URL 파라미터로 전달된 roomId 처리 - 단순화
-  useEffect(() => {
-    const roomIdFromUrl = searchParams.get('roomId');
-
-    // 한 번만 실행되도록 체크
-    if (roomIdFromUrl && state.rooms.length > 0 && state.isConnected && !state.currentRoom) {
-      const targetRoom = state.rooms.find(room => room.id === Number(roomIdFromUrl));
-      if (targetRoom) {
-        console.log("URL 파라미터로 채팅방 자동 선택:", targetRoom.name);
-        selectRoom(targetRoom);
-      }
-    }
-  }, [searchParams, state.rooms, state.isConnected, state.currentRoom, selectRoom]);
 
   // 컴포넌트 언마운트 시 연결 해제
   useEffect(() => {
