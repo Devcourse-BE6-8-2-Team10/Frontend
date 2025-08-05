@@ -74,7 +74,7 @@ const fetchPostDetail = async (postId: string) => {
   const response = await apiClient.get(`/api/posts/${postId}`);
   const filesResponse = await apiClient.get(`/api/posts/${postId}/files`);
 
-  const postData = response.data.data;
+  const postData = response.data.data || response.data;
   const filesData = filesResponse.data.data || [];
 
   return {
@@ -95,8 +95,7 @@ const fetchFiles = async (postId: string) => {
 };
 
 export default function PatentDetailPage() {
-  const { isAuthenticated, loading: authLoading } = useAuth();
-  const { user } = useAuth();
+  const { isAuthenticated, loading: authLoading, user } = useAuth();
   const { ensureConnected } = useChat(); // 연결 보장 함수 추가
   const router = useRouter();
   const params = useParams();
@@ -125,7 +124,7 @@ export default function PatentDetailPage() {
                 if (f.fileUrl.startsWith('http')) {
                     return f.fileUrl;
                 }
-                return `${apiClient.defaults.baseURL}${f.fileUrl}`;
+                return `${apiClient.defaults.baseURL || ''}${f.fileUrl}`;
             });
             setFileUrls(fullFileUrls);
           } catch (error) {
@@ -177,19 +176,19 @@ export default function PatentDetailPage() {
 
       // 백엔드 API 호출하여 채팅방 생성 또는 기존 채팅방 ID 반환
       const response = await apiClient.post(`/api/chat/rooms/${post.id}`);
-      
+
       if (response.data.resultCode === "200") {
         const chatRoomId = response.data.data;
         console.log("채팅방 ID:", chatRoomId);
-        
+
         // 채팅 페이지로 이동하면서 roomId를 쿼리 파라미터로 전달
         router.push(`/chat?roomId=${chatRoomId}`);
       } else {
         alert('채팅방 생성에 실패했습니다.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('채팅방 생성 실패:', error);
-      if (error.response?.data?.msg?.includes('이미 존재')) {
+      if (error.response?.data?.msg && typeof error.response.data.msg === 'string' && error.response.data.msg.includes('이미 존재')) {
         // 이미 채팅방이 존재하는 에러인 경우, 기존 채팅방을 찾아서 이동
         try {
           const roomsResponse = await apiClient.get('/api/chat/rooms/my');
@@ -388,7 +387,7 @@ export default function PatentDetailPage() {
                   {post.files.map((file: any) => (
                     <li key={file.id} className="text-gray-700">
                       <a
-                        href={file.fileUrl.startsWith('http') ? file.fileUrl : `${apiClient.defaults.baseURL}${file.fileUrl}`}
+                        href={file.fileUrl.startsWith('http') ? file.fileUrl : `${apiClient.defaults.baseURL || ''}${file.fileUrl}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:underline"
@@ -403,7 +402,7 @@ export default function PatentDetailPage() {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
-              <button 
+              <button
                 className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handlePurchaseInquiry}
                 disabled={isCreatingRoom}
