@@ -25,20 +25,20 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 
 // 응답 인터셉터 - 에러 처리
 apiClient.interceptors.response.use(
-    (response: AxiosResponse) => response,
-    (error: AxiosError) => {
-      // 401/403 에러 시 자동 로그아웃 처리
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        clearAccessTokenCookie();
-        clearRefreshTokenCookie();
-        // 현재 경로가 로그인 페이지가 아닌 경우에만 리다이렉트
-        if (!window.location.pathname.includes('/login')) {
-          window.location.href = '/login';
-        }
+  (response: AxiosResponse) => response,
+  (error: AxiosError) => {
+    // 401/403 에러 시 자동 로그아웃 처리
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      clearAccessTokenCookie();
+      clearRefreshTokenCookie();
+      // 현재 경로가 로그인 페이지가 아닌 경우에만 리다이렉트
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
       }
-      return Promise.reject(error);
     }
-  );
+    return Promise.reject(error);
+  }
+);
 
 // 채팅 관련 API 함수들
 export const chatAPI = {
@@ -139,17 +139,17 @@ export const patentAPI = {
     fileSize: number;
   }>> => {
     const response = await apiClient.get(`/api/posts/${postId}/files`);
-    return response.data.data || []; // 데이터 구조에 따라 .data를 추가
+    return response.data.data || [];
   },
 
   // 내 특허 목록 조회
-  getMyPatents: async (): Promise<any[]> => {
+  getMyPatents: async (): Promise<unknown[]> => {
     const response = await apiClient.get("/api/posts/me");
     return response.data;
   },
 
   // 찜한 특허 목록 조회
-  getLikedPatents: async (): Promise<any[]> => {
+  getLikedPatents: async (): Promise<unknown[]> => {
     const response = await apiClient.get("/api/likes/me");
     return response.data;
   },
@@ -190,7 +190,6 @@ export const memberAPI = {
     name: string;
     email: string;
   }): Promise<void> => {
-    // 인증 없이 직접 호출 (비밀번호 찾기는 인증이 필요하지 않음)
     const response = await fetch(`${apiClient.defaults.baseURL}/api/members/verify-member`, {
       method: 'POST',
       headers: {
@@ -198,7 +197,7 @@ export const memberAPI = {
       },
       body: JSON.stringify(data),
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || '회원 확인에 실패했습니다.');
@@ -212,7 +211,6 @@ export const memberAPI = {
     newPassword: string;
     confirmPassword: string;
   }): Promise<void> => {
-    // 인증 없이 직접 호출 (비밀번호 찾기는 인증이 필요하지 않음)
     const response = await fetch(`${apiClient.defaults.baseURL}/api/members/find-password`, {
       method: 'POST',
       headers: {
@@ -220,7 +218,7 @@ export const memberAPI = {
       },
       body: JSON.stringify(data),
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || '비밀번호 변경에 실패했습니다.');
@@ -376,7 +374,5 @@ export const adminAPI = {
     await apiClient.delete(`/api/admin/patents/${patentId}`);
   },
 };
-
-
 
 export default apiClient;
