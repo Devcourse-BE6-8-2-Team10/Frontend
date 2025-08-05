@@ -442,15 +442,6 @@ export default function PatentDetailPage() {
               </div>
             )}
 
-            {/* Debug: Post Status */}
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-sm text-yellow-800">
-                <strong>Debug Info:</strong> Post Status = &quot;{post.status}&quot; | 
-                Show Buy Button = {(post.status === 'SALE' || post.status === 'AVAILABLE' || post.status === '판매중').toString()} |
-                Owner = {post.ownerName || 'empty'} | Current User = {user?.name || 'empty'}
-              </p>
-            </div>
-
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
               {/* 구매하기 버튼 - 판매 가능한 상태이고 본인 게시글이 아닐 때만 표시 */}
