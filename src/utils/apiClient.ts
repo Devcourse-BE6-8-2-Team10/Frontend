@@ -167,6 +167,10 @@ export const tradeAPI = {
     const response = await apiClient.get(`/api/trades/${tradeId}`);
     return response.data.data;
   },
+  // 거래 생성
+  createTrade: async (postId: number): Promise<void> => {
+    await apiClient.post("/api/trades", { postId });
+  },
 };
 
 // 거래 관련 타입 정의
