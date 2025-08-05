@@ -63,7 +63,7 @@ export default function MyPage() {
             Authorization: `Bearer ${accessToken}`,
           },
         });
-        const completed = response.data.data.content.filter((trade: Trade) => trade.status === 'COMPLETED');
+        const completed = (response.data.data?.content || []).filter((trade: Trade) => trade.status === 'COMPLETED');
         setCompletedTradesCount(completed.length);
       } catch (error) {
         console.error('Failed to fetch completed trades:', error);
@@ -88,7 +88,7 @@ export default function MyPage() {
             Authorization: `Bearer ${accessToken}`,
           },
         });
-        setMyPatents(response.data.data);
+        setMyPatents(response.data || []);
       } catch (error) {
         console.error('Failed to fetch my patents:', error);
         setMyPatentsError('내 특허를 불러오는 데 실패했습니다.');
@@ -106,7 +106,7 @@ export default function MyPage() {
             Authorization: `Bearer ${accessToken}`,
           },
         });
-        setLikedPatents(response.data.data);
+        setLikedPatents(response.data || []);
       } catch (error) {
         console.error('Failed to fetch liked patents:', error);
         setLikedPatentsError('찜한 특허를 불러오는 데 실패했습니다.');
