@@ -31,22 +31,8 @@ export default function Footer() {
                   특허 등록
                 </a>
               </li>
-              <li>
-                <a
-                  href="/trading"
-                  className="text-gray-300 hover:text-white transition-colors"
-                >
-                  거래 중개
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/legal/consultation"
-                  className="text-gray-300 hover:text-white transition-colors"
-                >
-                  법률 자문
-                </a>
-              </li>
+              
+              
             </ul>
           </div>
           <div>
@@ -60,14 +46,7 @@ export default function Footer() {
                   자주 묻는 질문
                 </a>
               </li>
-              <li>
-                <a
-                  href="/support/inquiry"
-                  className="text-gray-300 hover:text-white transition-colors"
-                >
-                  1:1 문의
-                </a>
-              </li>
+              
               <li>
                 <a
                   href="/legal/terms"
