@@ -36,7 +36,7 @@ class WebSocketService {
           connectHeaders: {
             "user-email": userEmail
           },
-          debug: process.env.NODE_ENV === "development" ? console.log : undefined,
+          // debug: process.env.NODE_ENV === "development" ? console.log : undefined,
           reconnectDelay: 0,
           heartbeatIncoming: 4000,
           heartbeatOutgoing: 4000,
