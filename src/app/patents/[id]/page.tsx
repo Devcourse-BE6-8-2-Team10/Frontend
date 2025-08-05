@@ -131,6 +131,8 @@ export default function PatentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [likeLoading, setLikeLoading] = useState(false);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+  const [isBuying, setIsBuying] = useState(false);
+
   // 작성자 이름을 가져오는 함수
   const getAuthorName = (post: PostDetail): string => {
     console.log('Getting author name from post:', post);
