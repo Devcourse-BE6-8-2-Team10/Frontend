@@ -51,16 +51,14 @@ export default function AdminPatentsPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const { user, isAuthenticated, loading, data: patents, isLoading, error, refetch } = useAdminTable<Patent>(
-    async () => {
+    async (): Promise<Patent[]> => {
       const response = await adminAPI.getAllPatents();
-      // API 응답 구조 검증 및 안전한 데이터 추출
-      return Array.isArray(response?.data?.content) 
-        ? response.data.content 
-        : Array.isArray(response?.data) 
-        ? response.data 
-        : Array.isArray(response) 
-        ? response 
-        : [];
+      const content = response?.data?.content || [];
+      return content.map(post => ({
+        ...post,
+        favoriteCnt: post.favoriteCount || 0,
+        authorId: post.memberId || 0,
+      }));
     }
   );
 
