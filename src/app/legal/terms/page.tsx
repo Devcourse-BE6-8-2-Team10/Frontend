@@ -4,12 +4,12 @@ export default function TermsPage() {
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="bg-white rounded-lg shadow-xl p-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-8">이용약관</h1>
-          
+
           <div className="space-y-6 text-gray-700">
             <section>
               <h2 className="text-xl font-semibold text-gray-800 mb-4">제1조 (목적)</h2>
               <p className="leading-relaxed">
-                본 약관은 특허바다(이하 "회사")가 제공하는 특허 거래 플랫폼 서비스의 이용과 관련하여 
+                본 약관은 특허바다(이하 "회사")가 제공하는 특허 거래 플랫폼 서비스의 이용과 관련하여
                 회사와 이용자 간의 권리, 의무 및 책임사항, 기타 필요한 사항을 규정함을 목적으로 합니다.
               </p>
             </section>
@@ -21,7 +21,7 @@ export default function TermsPage() {
                   <strong>1. "서비스"</strong>라 함은 회사가 제공하는 특허 검색, 등록, 거래 중개, 법률 자문 등의 모든 서비스를 의미합니다.
                 </p>
                 <p className="leading-relaxed">
-                  <strong>2. "이용자"</strong>라 함은 회사의 서비스에 접속하여 본 약관에 따라 회사와 이용계약을 체결하고 
+                  <strong>2. "이용자"</strong>라 함은 회사의 서비스에 접속하여 본 약관에 따라 회사와 이용계약을 체결하고
                   회사가 제공하는 서비스를 이용하는 회원 및 비회원을 말합니다.
                 </p>
                 <p className="leading-relaxed">
@@ -65,11 +65,11 @@ export default function TermsPage() {
               <h2 className="text-xl font-semibold text-gray-800 mb-4">제5조 (서비스의 중단)</h2>
               <div className="space-y-3">
                 <p className="leading-relaxed">
-                  1. 회사는 컴퓨터 등 정보통신설비의 보수점검, 교체 및 고장, 통신의 두절 등의 사유가 발생한 경우에는 
+                  1. 회사는 컴퓨터 등 정보통신설비의 보수점검, 교체 및 고장, 통신의 두절 등의 사유가 발생한 경우에는
                   서비스의 제공을 일시적으로 중단할 수 있습니다.
                 </p>
                 <p className="leading-relaxed">
-                  2. 회사는 제1항의 사유로 서비스의 제공이 일시적으로 중단됨으로 인하여 이용자 또는 제3자가 입은 손해에 대하여 배상합니다. 
+                  2. 회사는 제1항의 사유로 서비스의 제공이 일시적으로 중단됨으로 인하여 이용자 또는 제3자가 입은 손해에 대하여 배상합니다.
                   단, 회사가 고의 또는 과실이 없음을 입증하는 경우에는 그러하지 아니합니다.
                 </p>
               </div>
@@ -112,7 +112,7 @@ export default function TermsPage() {
             <section>
               <h2 className="text-xl font-semibold text-gray-800 mb-4">제8조 (개인정보보호)</h2>
               <p className="leading-relaxed">
-                회사는 관련법령이 정하는 바에 따라 회원의 개인정보를 보호하며, 개인정보의 보호 및 사용에 대해서는 
+                회사는 관련법령이 정하는 바에 따라 회원의 개인정보를 보호하며, 개인정보의 보호 및 사용에 대해서는
                 관련법령 및 회사가 정하는 개인정보처리방침을 적용합니다.
               </p>
             </section>
@@ -121,11 +121,11 @@ export default function TermsPage() {
               <h2 className="text-xl font-semibold text-gray-800 mb-4">제9조 (회사의 의무)</h2>
               <div className="space-y-3">
                 <p className="leading-relaxed">
-                  1. 회사는 관련법령과 본 약관이 금지하거나 공서양속에 반하는 행위를 하지 않으며 본 약관이 정하는 바에 따라 
+                  1. 회사는 관련법령과 본 약관이 금지하거나 공서양속에 반하는 행위를 하지 않으며 본 약관이 정하는 바에 따라
                   지속적이고, 안정적으로 서비스를 제공하기 위하여 노력합니다.
                 </p>
                 <p className="leading-relaxed">
-                  2. 회사는 이용자가 안전하게 인터넷 서비스를 이용할 수 있도록 이용자의 개인정보(신용정보 포함) 보호를 위한 
+                  2. 회사는 이용자가 안전하게 인터넷 서비스를 이용할 수 있도록 이용자의 개인정보(신용정보 포함) 보호를 위한
                   보안 시스템을 구축합니다.
                 </p>
               </div>
@@ -154,8 +154,8 @@ export default function TermsPage() {
                   1. 회사가 작성한 저작물에 대한 저작권 기타 지적재산권은 회사에 귀속합니다.
                 </p>
                 <p className="leading-relaxed">
-                  2. 이용자는 서비스를 이용함으로써 얻은 정보 중 회사에게 지적재산권이 귀속된 정보를 
-                  회사의 사전 승낙 없이 복제, 송신, 출판, 배포, 방송 기타 방법에 의하여 영리목적으로 이용하거나 
+                  2. 이용자는 서비스를 이용함으로써 얻은 정보 중 회사에게 지적재산권이 귀속된 정보를
+                  회사의 사전 승낙 없이 복제, 송신, 출판, 배포, 방송 기타 방법에 의하여 영리목적으로 이용하거나
                   제3자에게 이용하게 하여서는 안됩니다.
                 </p>
               </div>
@@ -165,7 +165,7 @@ export default function TermsPage() {
               <h2 className="text-xl font-semibold text-gray-800 mb-4">제12조 (분쟁해결)</h2>
               <div className="space-y-3">
                 <p className="leading-relaxed">
-                  1. 회사는 이용자가 제기하는 정당한 의견이나 불만을 반영하고 그 피해를 보상처리하기 위하여 
+                  1. 회사는 이용자가 제기하는 정당한 의견이나 불만을 반영하고 그 피해를 보상처리하기 위하여
                   피해보상처리기구를 설치·운영합니다.
                 </p>
                 <p className="leading-relaxed">
