@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from "react";
 import apiClient from "@/utils/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +20,23 @@ interface Post {
   imageUrl?: string;
 }
 
+// 카테고리 영문 → 한글 변환 맵
+const categoryNameMap: { [key: string]: string } = {
+  PRODUCT: "물건발명",
+  METHOD: "방법발명",
+  USE: "용도발명",
+  DESIGN: "디자인권",
+  TRADEMARK: "상표권",
+  COPYRIGHT: "저작권",
+  ETC: "기타",
+};
+
+// status 영문 → 한글 변환 맵
+const statusMap: { [key: string]: string } = {
+  SALE: "판매중",
+  SOLD_OUT: "판매완료",
+};
+
 const getFullImageUrl = (url?: string): string | undefined => {
   if (!url) return undefined;
   if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -28,8 +47,8 @@ const getFullImageUrl = (url?: string): string | undefined => {
 
 export default function PatentsPage() {
   const { isAuthenticated } = useAuth();
+  const [posts, setPosts] = useState<Post[]>([]);
   const [popularPosts, setPopularPosts] = useState<Post[]>([]);
-  const [recentPosts, setRecentPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -44,28 +63,30 @@ export default function PatentsPage() {
           apiClient.get('/api/posts/popular'),
           apiClient.get('/api/posts')
         ]);
-
-        const popularData = popularRes.data.data.map((post: Post) => ({
+        // 인기글
+        const popularData = (popularRes.data.data || []).map((post: Post) => ({
           ...post,
           imageUrl: getFullImageUrl(post.imageUrl),
           isLiked: post.isLiked ?? false
         }));
-
-        const recentData = recentRes.data.map((post: Post) => ({
-          ...post,
-          imageUrl: getFullImageUrl(post.imageUrl),
-          isLiked: post.isLiked ?? false
-        }));
-
         setPopularPosts(popularData.slice(0, 10));
-        setRecentPosts(recentData);
+        // 최신글
+        const postsWithFullImageUrl = (recentRes.data.data || recentRes.data).map((post: Post) => ({
+          ...post,
+          imageUrl: getFullImageUrl(post.imageUrl),
+          isLiked: post.isLiked ?? false
+        }));
+        setPosts(postsWithFullImageUrl);
       } catch (error) {
-        console.error('게시글 조회 실패:', error);
+        if (error instanceof Error) {
+          console.error('게시글 목록 조회 실패:', error.message);
+        } else {
+          console.error('게시글 목록 조회 실패:', error);
+        }
       } finally {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
@@ -84,21 +105,21 @@ export default function PatentsPage() {
       window.location.href = '/login';
       return;
     }
-
     try {
-      const updateLike = (posts: Post[]) => posts.map(p =>
-        p.id === postId ? { ...p, isLiked: !p.isLiked, favoriteCnt: p.isLiked ? p.favoriteCnt - 1 : p.favoriteCnt + 1 } : p
-      );
-
-      const post = [...popularPosts, ...recentPosts].find(p => p.id === postId);
-      if (!post) return;
-
-      const method = post.isLiked ? 'delete' : 'post';
+      // 최신글과 인기글 모두에 반영
+      const method = posts.find(p => p.id === postId)?.isLiked ? 'delete' : 'post';
       const response = await apiClient[method](`/api/likes/${postId}`);
-
       if (response.status === 200) {
-        setPopularPosts(updateLike);
-        setRecentPosts(updateLike);
+        setPosts(posts.map(p =>
+          p.id === postId
+            ? { ...p, isLiked: !p.isLiked, favoriteCnt: p.isLiked ? p.favoriteCnt - 1 : p.favoriteCnt + 1 }
+            : p
+        ));
+        setPopularPosts(popularPosts.map(p =>
+          p.id === postId
+            ? { ...p, isLiked: !p.isLiked, favoriteCnt: p.isLiked ? p.favoriteCnt - 1 : p.favoriteCnt + 1 }
+            : p
+        ));
       }
     } catch (error) {
       console.error('찜 토글 오류:', error);
@@ -109,13 +130,14 @@ export default function PatentsPage() {
     setSearchKeyword(searchTerm);
   };
 
-  const filteredRecentPosts = recentPosts.filter(post => {
+  const filteredPosts = posts.filter(post => {
     const matchesSearch = post.title.toLowerCase().includes(searchKeyword.toLowerCase());
-    const matchesCategory = selectedCategory === "전체 카테고리" || post.category === selectedCategory;
+    const matchesCategory = selectedCategory === "전체 카테고리" || categoryNameMap[post.category] === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const categories = ["전체 카테고리", "물건발명", "방법발명", "용도발명", "디자인권", "상표권", "저작권", "기타"];
+  // 카테고리 한글 목록
+  const categories = ["전체 카테고리", ...Object.values(categoryNameMap)];
 
   if (loading) {
     return (
@@ -162,17 +184,17 @@ export default function PatentsPage() {
               </button>
             </div>
             <div className="flex gap-2 flex-wrap">
-              {categories.filter(c => c !== "전체 카테고리").map(category => (
+              {Object.entries(categoryNameMap).map(([eng, kor]) => (
                 <button
-                  key={category}
+                  key={kor}
                   className={`px-3 py-1 rounded-full text-xs transition-colors ${
-                    activeTag === category
+                    activeTag === kor
                       ? 'bg-purple-600 text-white'
                       : 'bg-blue-100 text-[#1a365d] hover:bg-blue-200'
                   }`}
-                  onClick={() => handleCategoryClick(category)}
+                  onClick={() => handleCategoryClick(kor)}
                 >
-                  #{category}
+                  #{kor}
                 </button>
               ))}
               {activeTag && (
@@ -189,14 +211,98 @@ export default function PatentsPage() {
           {/* 인기 게시글 */}
           <h2 className="text-2xl font-bold mb-4">🔥 인기 게시글 TOP 10</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {popularPosts.map(post => renderPostCard(post))}
+            {popularPosts.length > 0 ? (
+              popularPosts.map((post) => (
+                <Link href={`/patents/${post.id}`} key={post.id}>
+                  <div className="bg-white/95 backdrop-blur-sm rounded-xl p-4 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 flex flex-col h-full">
+                    <div className="w-full h-40 bg-gray-200 rounded-lg mb-3 overflow-hidden">
+                      {post.imageUrl ? (
+                        <Image src={post.imageUrl} alt={post.title} width={300} height={200} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-500">No Image</div>
+                      )}
+                    </div>
+                    <div className="flex flex-col flex-grow">
+                      <h3 className="font-bold text-[#1a365d] mb-2 text-sm flex-grow">{post.title}</h3>
+                      <div className="flex justify-between items-center mb-2 mt-auto">
+                        <span className="font-bold text-base text-[#1a365d]">₩{post.price.toLocaleString()}</span>
+                        {/* status 한글 변환 */}
+                        {post.status && (
+                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                            {statusMap[post.status] || post.status}
+                          </span>
+                        )}
+                        <span className="text-gray-500 text-xs">{categoryNameMap[post.category] || post.category}</span>
+                      </div>
+                      <div className="flex gap-2 items-center mt-2">
+                        <button
+                          className="text-gray-400 hover:text-red-500 transition-colors text-sm"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleLike(post.id);
+                          }}
+                        >
+                          {post.isLiked ? '❤️' : '🤍'}
+                        </button>
+                        <span className="text-gray-500 text-xs">{post.favoriteCnt}</span>
+                        <button className="text-gray-400 hover:text-blue-500 transition-colors text-sm">📤</button>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-8">
+                <p className="text-gray-500">인기 게시글이 없습니다.</p>
+              </div>
+            )}
           </div>
 
           {/* 최신 게시글 */}
           <h2 className="text-2xl font-bold mb-4">🆕 최신 게시글</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {filteredRecentPosts.length > 0 ? (
-              filteredRecentPosts.map(post => renderPostCard(post))
+            {filteredPosts.length > 0 ? (
+              filteredPosts.map((post) => (
+                <Link href={`/patents/${post.id}`} key={post.id}>
+                  <div className="bg-white/95 backdrop-blur-sm rounded-xl p-4 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 flex flex-col h-full">
+                    <div className="w-full h-40 bg-gray-200 rounded-lg mb-3 overflow-hidden">
+                      {post.imageUrl ? (
+                        <Image src={post.imageUrl} alt={post.title} width={300} height={200} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-500">No Image</div>
+                      )}
+                    </div>
+                    <div className="flex flex-col flex-grow">
+                      <h3 className="font-bold text-[#1a365d] mb-2 text-sm flex-grow">{post.title}</h3>
+                      <div className="flex justify-between items-center mb-2 mt-auto">
+                        <span className="font-bold text-base text-[#1a365d]">₩{post.price.toLocaleString()}</span>
+                        {/* status 한글 변환 */}
+                        {post.status && (
+                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                            {statusMap[post.status] || post.status}
+                          </span>
+                        )}
+                        <span className="text-gray-500 text-xs">{categoryNameMap[post.category] || post.category}</span>
+                      </div>
+                      <div className="flex gap-2 items-center mt-2">
+                        <button
+                          className="text-gray-400 hover:text-red-500 transition-colors text-sm"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleLike(post.id);
+                          }}
+                        >
+                          {post.isLiked ? '❤️' : '🤍'}
+                        </button>
+                        <span className="text-gray-500 text-xs">{post.favoriteCnt}</span>
+                        <button className="text-gray-400 hover:text-blue-500 transition-colors text-sm">📤</button>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))
             ) : (
               <div className="col-span-full text-center py-8">
                 <p className="text-gray-500">검색 결과가 없습니다.</p>
@@ -207,41 +313,4 @@ export default function PatentsPage() {
       </section>
     </div>
   );
-
-  function renderPostCard(post: Post) {
-    return (
-      <Link href={`/patents/${post.id}`} key={post.id}>
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl p-4 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 flex flex-col h-full">
-          <div className="w-full h-40 bg-gray-200 rounded-lg mb-3 overflow-hidden">
-            {post.imageUrl ? (
-              <Image src={post.imageUrl} alt={post.title} width={300} height={200} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-500">No Image</div>
-            )}
-          </div>
-          <div className="flex flex-col flex-grow">
-            <h3 className="font-bold text-[#1a365d] mb-2 text-sm flex-grow">{post.title}</h3>
-            <div className="flex justify-between items-center mb-2 mt-auto">
-              <span className="font-bold text-base text-[#1a365d]">₩{post.price.toLocaleString()}</span>
-              {post.status && <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">{post.status}</span>}
-            </div>
-            <div className="flex gap-2 items-center mt-2">
-              <button
-                className="text-gray-400 hover:text-red-500 transition-colors text-sm"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  toggleLike(post.id);
-                }}
-              >
-                {post.isLiked ? '❤️' : '🤍'}
-              </button>
-              <span className="text-gray-500 text-xs">{post.favoriteCnt}</span>
-              <button className="text-gray-400 hover:text-blue-500 transition-colors text-sm">📤</button>
-            </div>
-          </div>
-        </div>
-      </Link>
-    );
-  }
 }

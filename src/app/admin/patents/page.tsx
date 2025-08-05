@@ -1,28 +1,125 @@
 'use client';
 
-import React from "react";
+import React, { useState } from "react";
+import { adminAPI } from "@/utils/apiClient";
 import AdminNavigation from "@/components/AdminNavigation";
 import AdminLoadingSpinner from "@/components/AdminLoadingSpinner";
-import { adminAPI } from "@/utils/apiClient";
 import { useAdminTable } from "@/hooks/useAdminTable";
+import PatentDetailModal from "@/components/admin/PatentDetailModal";
 
 interface Patent {
   id: number;
   title: string;
-  price: number;
+  description: string;
   category: string;
-  favoriteCnt: number;
+  price: number;
   createdAt: string;
-  imageUrl?: string;
+  modifiedAt?: string;
+  favoriteCnt: number;
+  authorId: number; 
+  authorName?: string; 
 }
 
+// 카테고리를 한글로 변환하는 함수
+const getCategoryLabel = (category: string): string => {
+  switch (category) {
+    case 'PRODUCT':
+      return '물건발명';
+    case 'METHOD':
+      return '방법발명';
+    case 'USE':
+      return '용도발명';
+    case 'DESIGN':
+      return '디자인권';
+    case 'TRADEMARK':
+      return '상표권';
+    case 'COPYRIGHT':
+      return '저작권';
+    case 'ETC':
+      return '기타';
+    default:
+      return category;
+  }
+};
+
 export default function AdminPatentsPage() {
-  const { user, isAuthenticated, loading, data: patents, isLoading, error } = useAdminTable<Patent>(
+  const [selectedPatentId, setSelectedPatentId] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
+  const [sortBy, setSortBy] = useState<string>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const { user, isAuthenticated, loading, data: patents, isLoading, error, refetch } = useAdminTable<Patent>(
     async () => {
       const response = await adminAPI.getAllPatents();
-      return response || [];
+      // API 응답 구조 검증 및 안전한 데이터 추출
+      return Array.isArray(response?.data?.content) 
+        ? response.data.content 
+        : Array.isArray(response?.data) 
+        ? response.data 
+        : Array.isArray(response) 
+        ? response 
+        : [];
     }
   );
+
+  const handlePatentClick = (patentId: number) => {
+    setSelectedPatentId(patentId);
+    setIsModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedPatentId(null);
+  };
+
+  const handlePatentUpdated = () => {
+    refetch(); // 특허 목록 새로고침
+  };
+
+  // 필터링된 특허 목록
+  const filteredPatents = patents.filter(patent => {
+    const matchesSearch = (patent.title?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === 'ALL' || patent.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
+  // 정렬된 특허 목록
+  const sortedPatents = [...filteredPatents].sort((a, b) => {
+    let aValue: string | number = '';
+    let bValue: string | number = '';
+    
+    switch (sortBy) {
+      case 'createdAt':
+        aValue = new Date(a.createdAt).getTime();
+        bValue = new Date(b.createdAt).getTime();
+        break;
+      case 'price':
+        aValue = a.price;
+        bValue = b.price;
+        break;
+      case 'favoriteCnt':
+        aValue = a.favoriteCnt;
+        bValue = b.favoriteCnt;
+        break;
+      case 'title':
+        aValue = a.title.toLowerCase();
+        bValue = b.title.toLowerCase();
+        break;
+      default:
+        // fallback
+        aValue = a[sortBy as keyof Patent] as string;
+        bValue = b[sortBy as keyof Patent] as string;
+        break;
+    }
+    
+    if (sortOrder === 'asc') {
+      return aValue > bValue ? 1 : -1;
+    } else {
+      return aValue < bValue ? 1 : -1;
+    }
+  });
 
   // 로딩 중이거나 인증되지 않은 경우 로딩 표시
   if (loading || !isAuthenticated || user?.role !== 'ADMIN') {
@@ -44,8 +141,50 @@ export default function AdminPatentsPage() {
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-bold text-[#1a365d]">특허 목록</h3>
-              <div className="text-sm text-gray-600">
-                총 {patents.length}개의 특허
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-gray-600">
+                  총 {sortedPatents.length}개의 특허 (전체 {patents.length}개)
+                </div>
+                <button
+                  onClick={refetch}
+                  disabled={isLoading}
+                  className="px-3 py-1 cursor-pointer bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm flex items-center gap-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  새로고침
+                </button>
+              </div>
+            </div>
+
+            {/* 검색 및 필터 */}
+            <div className="mb-6 flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                                 <input
+                   type="text"
+                   placeholder="제목으로 검색..."
+                   value={searchTerm}
+                   onChange={(e) => setSearchTerm(e.target.value)}
+                   className="w-full text-gray-900 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 />
+              </div>
+
+              <div className="sm:w-48">
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="w-full text-gray-500 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                                     <option value="ALL">전체 카테고리</option>
+                   <option value="PRODUCT">물건발명</option>
+                   <option value="METHOD">방법발명</option>
+                   <option value="USE">용도발명</option>
+                   <option value="DESIGN">디자인권</option>
+                   <option value="TRADEMARK">상표권</option>
+                   <option value="COPYRIGHT">저작권</option>
+                   <option value="ETC">기타</option>
+                </select>
               </div>
             </div>
 
@@ -56,58 +195,162 @@ export default function AdminPatentsPage() {
             )}
 
             {isLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">특허 목록을 불러오는 중...</p>
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600 font-medium">특허 목록을 불러오는 중...</p>
+                <p className="text-sm text-gray-500 mt-2">잠시만 기다려주세요</p>
               </div>
-            ) : patents.length === 0 ? (
+            ) : sortedPatents.length === 0 ? (
               <div className="text-center py-8">
-                <div className="text-gray-400 text-6xl mb-4">📋</div>
-                <p className="text-gray-600">등록된 특허가 없습니다.</p>
+                <div className="text-gray-400 text-6xl mb-4">
+                  {patents.length === 0 ? '📄' : '🔍'}
+                </div>
+                <p className="text-gray-600">
+                  {patents.length === 0 ? '등록된 특허가 없습니다.' : '검색 결과가 없습니다.'}
+                </p>
                 <p className="text-sm text-gray-500 mt-2">
-                  백엔드에서 관리자 API가 구현되면 특허 목록이 표시됩니다.
+                  {patents.length === 0 
+                    ? '백엔드에서 관리자 API가 구현되면 특허 목록이 표시됩니다.'
+                    : '다른 검색어나 필터를 시도해보세요.'
+                  }
                 </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                                     <thead>
-                     <tr className="border-b border-gray-200">
-                       <th className="text-left py-3 px-4 font-medium text-gray-700">ID</th>
-                       <th className="text-left py-3 px-4 font-medium text-gray-700">제목</th>
-                       <th className="text-left py-3 px-4 font-medium text-gray-700">카테고리</th>
-                       <th className="text-left py-3 px-4 font-medium text-gray-700">가격</th>
-                       <th className="text-left py-3 px-4 font-medium text-gray-700">좋아요</th>
-                       <th className="text-left py-3 px-4 font-medium text-gray-700">등록일</th>
-                       <th className="text-left py-3 px-4 font-medium text-gray-700">관리</th>
-                     </tr>
-                   </thead>
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-3 px-4 font-medium text-gray-700">번호</th>
+                      <th 
+                        className="text-left py-3 px-4 font-medium text-gray-700 cursor-pointer hover:bg-gray-50"
+                        onClick={() => {
+                          if (sortBy === 'title') {
+                            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            setSortBy('title');
+                            setSortOrder('asc');
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-1">
+                          제목
+                          {sortBy === 'title' && (
+                            <span className="text-xs">
+                              {sortOrder === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700">카테고리</th>
+                      <th 
+                        className="text-left py-3 px-4 font-medium text-gray-700 cursor-pointer hover:bg-gray-50"
+                        onClick={() => {
+                          if (sortBy === 'price') {
+                            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            setSortBy('price');
+                            setSortOrder('desc');
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-1">
+                          가격
+                          {sortBy === 'price' && (
+                            <span className="text-xs">
+                              {sortOrder === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-left py-3 px-4 font-medium text-gray-700 cursor-pointer hover:bg-gray-50"
+                        onClick={() => {
+                          if (sortBy === 'favoriteCnt') {
+                            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            setSortBy('favoriteCnt');
+                            setSortOrder('desc');
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-1">
+                          좋아요
+                          {sortBy === 'favoriteCnt' && (
+                            <span className="text-xs">
+                              {sortOrder === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-left py-3 px-4 font-medium text-gray-700 cursor-pointer hover:bg-gray-50"
+                        onClick={() => {
+                          if (sortBy === 'createdAt') {
+                            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            setSortBy('createdAt');
+                            setSortOrder('desc');
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-1">
+                          등록일
+                          {sortBy === 'createdAt' && (
+                            <span className="text-xs">
+                              {sortOrder === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                      <th className="text-center py-3 px-4 font-medium text-gray-700">관리</th>
+                    </tr>
+                  </thead>
                   <tbody>
-                                         {patents.map((patent) => (
-                       <tr key={patent.id} className="border-b border-gray-100 hover:bg-gray-50">
-                         <td className="py-3 px-4 text-gray-500">{patent.id}</td>
-                         <td className="py-3 px-4 text-gray-900 font-medium">{patent.title}</td>
-                         <td className="py-3 px-4 text-gray-500">{patent.category}</td>
-                         <td className="py-3 px-4 text-gray-500">{patent.price.toLocaleString()}원</td>
-                         <td className="py-3 px-4 text-gray-500">{patent.favoriteCnt}</td>
-                         <td className="py-3 px-4 text-gray-500">
-                           {new Date(patent.createdAt).toLocaleDateString()}
+                    {sortedPatents.map((patent, index) => (
+                      <tr key={patent.id} className="border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors duration-200" onClick={() => handlePatentClick(patent.id)}>
+                        <td className="py-3 px-4 text-gray-500">{index + 1}</td>
+                        <td className="py-3 px-4 text-gray-900 font-medium">{patent.title}</td>
+                                                 <td className="py-3 px-4">
+                           <span className={`px-2 py-1 rounded-full text-xs ${
+                             patent.category === 'PRODUCT' 
+                               ? 'bg-blue-100 text-blue-800' 
+                               : patent.category === 'METHOD'
+                               ? 'bg-green-100 text-green-800'
+                               : patent.category === 'USE'
+                               ? 'bg-purple-100 text-purple-800'
+                               : patent.category === 'DESIGN'
+                               ? 'bg-orange-100 text-orange-800'
+                               : patent.category === 'TRADEMARK'
+                               ? 'bg-red-100 text-red-800'
+                               : patent.category === 'COPYRIGHT'
+                               ? 'bg-indigo-100 text-indigo-800'
+                               : patent.category === 'ETC'
+                               ? 'bg-gray-100 text-gray-800'
+                               : 'bg-gray-100 text-gray-800'
+                           }`}>
+                             {getCategoryLabel(patent.category)}
+                           </span>
                          </td>
-                         <td className="py-3 px-4">
-                           <div className="flex gap-2">
-                             <button className="text-blue-600 hover:text-blue-700 text-xs">
-                               보기
-                             </button>
-                             <button className="text-yellow-600 hover:text-yellow-700 text-xs">
-                               수정
-                             </button>
-                             <button className="text-red-600 hover:text-red-700 text-xs">
-                               삭제
-                             </button>
-                           </div>
-                         </td>
-                       </tr>
-                     ))}
+                        <td className="py-3 px-4 text-gray-900">{patent.price.toLocaleString()}원</td>
+                        <td className="py-3 px-4 text-gray-900">{patent.favoriteCnt}</td>
+                        <td className="py-3 px-4 text-gray-500">
+                          {new Date(patent.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex justify-center gap-2">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePatentClick(patent.id);
+                              }}
+                              className="text-blue-600 cursor-pointer hover:text-blue-700 text-xs font-medium bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded transition-colors"
+                            >
+                              상세보기
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -115,6 +358,16 @@ export default function AdminPatentsPage() {
           </div>
         </div>
       </section>
+
+      {/* 특허 상세 정보 모달 */}
+      {selectedPatentId && (
+        <PatentDetailModal
+          isOpen={isModalOpen}
+          onClose={handleModalClose}
+          patentId={selectedPatentId}
+          onPatentUpdated={handlePatentUpdated}
+        />
+      )}
     </div>
   );
 } 

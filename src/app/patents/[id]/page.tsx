@@ -5,10 +5,13 @@ import apiClient from '@/utils/apiClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChat } from '@/contexts/ChatContext';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
+import { tradeAPI } from '@/utils/apiClient';
 
 const statusMap: { [key: string]: string } = {
   SALE: '판매중',
-  SOLD_OUT: '판매완료'
+  SOLD_OUT: '판매완료',
 };
 
 interface FileUploadResponse {
@@ -84,7 +87,7 @@ const fetchPostDetail = async (postId: string) => {
   };
 };
 
-const fetchFiles = async (postId: string) => {
+const fetchFiles = async (postId: string): Promise<FileUploadResponse[]> => {
   try {
     const response = await apiClient.get(`/api/posts/${postId}/files`);
     return response.data.data || [];
@@ -96,10 +99,10 @@ const fetchFiles = async (postId: string) => {
 
 export default function PatentDetailPage() {
   const { isAuthenticated, loading: authLoading, user } = useAuth();
-  const { ensureConnected } = useChat(); // 연결 보장 함수 추가
+  const { ensureConnected, refreshChatRooms } = useChat();
   const router = useRouter();
   const params = useParams();
-  const postId = params.id;
+  const postId = params.id as string;
 
   const [post, setPost] = useState<PostDetail | null>(null);
   const [fileUrls, setFileUrls] = useState<string[]>([]);
@@ -107,6 +110,7 @@ export default function PatentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [likeLoading, setLikeLoading] = useState(false);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+  const [isBuying, setIsBuying] = useState(false);
 
   useEffect(() => {
     if (!authLoading) {
@@ -116,15 +120,15 @@ export default function PatentDetailPage() {
         const loadPostAndFiles = async () => {
           setLoading(true);
           try {
-            const postData = await fetchPostDetail(postId as string);
+            const postData = await fetchPostDetail(postId);
             setPost(postData);
 
-            const filesData = await fetchFiles(postId as string);
-            const fullFileUrls = filesData.map((f: any) => {
-                if (f.fileUrl.startsWith('http')) {
-                    return f.fileUrl;
-                }
-                return `${apiClient.defaults.baseURL || ''}${f.fileUrl}`;
+            const filesData = await fetchFiles(postId);
+            const fullFileUrls = filesData.map((f: FileUploadResponse) => {
+              if (f.fileUrl.startsWith('http')) {
+                return f.fileUrl;
+              }
+              return `${apiClient.defaults.baseURL || ''}${f.fileUrl}`;
             });
             setFileUrls(fullFileUrls);
           } catch (error) {
@@ -141,7 +145,7 @@ export default function PatentDetailPage() {
     }
   }, [authLoading, isAuthenticated, router, postId]);
 
- const handleDelete = async () => {
+  const handleDelete = async () => {
     if (!confirm('정말 삭제하시겠습니까?')) return;
     try {
       await apiClient.delete(`/api/posts/${post?.id}`);
@@ -155,13 +159,12 @@ export default function PatentDetailPage() {
 
   // 구매 문의 기능
   const handlePurchaseInquiry = async () => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !post) {
       alert('로그인이 필요합니다.');
       router.push('/login');
       return;
     }
 
-    // 이미 채팅방 생성 중이면 중복 호출 방지
     if (isCreatingRoom) {
       console.log('이미 채팅방 생성 중입니다.');
       return;
@@ -170,32 +173,46 @@ export default function PatentDetailPage() {
     setIsCreatingRoom(true);
 
     try {
-      // WebSocket 연결 확인 및 자동 연결
       console.log("구매 문의 - WebSocket 연결 확인");
       await ensureConnected();
 
-      // 백엔드 API 호출하여 채팅방 생성 또는 기존 채팅방 ID 반환
       const response = await apiClient.post(`/api/chat/rooms/${post.id}`);
 
       if (response.data.resultCode === "200") {
         const chatRoomId = response.data.data;
         console.log("채팅방 ID:", chatRoomId);
 
-        // 채팅 페이지로 이동하면서 roomId를 쿼리 파라미터로 전달
-        router.push(`/chat?roomId=${chatRoomId}`);
+        try {
+          console.log("채팅방 목록 새로고침 시작");
+          await refreshChatRooms();
+          console.log("채팅방 목록 새로고침 완료");
+
+          setTimeout(() => {
+            router.push(`/chat?roomId=${chatRoomId}`);
+          }, 300);
+
+        } catch (refreshError) {
+          console.error('채팅방 목록 새로고침 실패:', refreshError);
+          router.push(`/chat?roomId=${chatRoomId}`);
+        }
       } else {
         alert('채팅방 생성에 실패했습니다.');
       }
     } catch (error: any) {
       console.error('채팅방 생성 실패:', error);
-      if (error.response?.data?.msg && typeof error.response.data.msg === 'string' && error.response.data.msg.includes('이미 존재')) {
-        // 이미 채팅방이 존재하는 에러인 경우, 기존 채팅방을 찾아서 이동
+      if (error.response?.data?.msg?.includes('이미 존재')) {
         try {
           const roomsResponse = await apiClient.get('/api/chat/rooms/my');
           const rooms = roomsResponse.data.data;
-          // 해당 게시글과 관련된 채팅방 찾기 (임시로 가장 최근 채팅방으로 이동)
           if (rooms && rooms.length > 0) {
-            router.push(`/chat?roomId=${rooms[0].id}`);
+            const existingRoom = rooms.find((room: any) => room.postId === post.id);
+            if (existingRoom) {
+              setTimeout(() => {
+                router.push(`/chat?roomId=${existingRoom.id}`);
+              }, 300);
+            } else {
+              alert('관련 채팅방을 찾을 수 없습니다. 새로운 채팅방을 다시 시도해주세요.');
+            }
           } else {
             alert('채팅방을 찾을 수 없습니다.');
           }
@@ -267,6 +284,22 @@ export default function PatentDetailPage() {
     );
   }
 
+  const handleBuy = async () => {
+    if (!isAuthenticated) return router.push('/login');
+    if (!post) return;
+
+    setIsBuying(true);
+    try {
+      await tradeAPI.createTrade(post.id);
+      alert('구매가 완료되었습니다.');
+      router.push('/mypage');
+    } catch (err: any) {
+      alert(err?.response?.data?.msg || '거래 생성에 실패했습니다.');
+    } finally {
+      setIsBuying(false);
+    }
+  };
+
   const categoryStyle =
     colorMap[post.category] || { bg: 'bg-gray-100', text: 'text-gray-600' };
 
@@ -276,27 +309,29 @@ export default function PatentDetailPage() {
         <div className="max-w-4xl mx-auto">
           {/* Breadcrumb */}
           <div className="text-gray-400 text-sm mb-6">
-            <a href="/" className="hover:text-gray-200">
+            <Link href="/" className="hover:text-gray-200">
               홈
-            </a>
-            &gt;
-            <a href="/patents" className="hover:text-gray-200">
+            </Link>
+            &nbsp;&gt;&nbsp;
+            <Link href="/patents" className="hover:text-gray-200">
               특허목록
-            </a>
-            &gt;
+            </Link>
+            &nbsp;&gt;&nbsp;
             <span>특허 상세</span>
           </div>
 
           {/* Patent Detail Card */}
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-8 shadow-xl">
             {/* Image Slider */}
-            <div className="relative w-full h-64 mb-6 bg-gray-200 rounded-lg overflow-hidden">
+            <div className="relative w-full h-64 md:h-80 mb-6 bg-gray-200 rounded-lg overflow-hidden">
               {fileUrls.length > 0 ? (
                 <>
-                  <img
+                  <Image
                     src={fileUrls[currentImageIndex]}
                     alt={`Patent image ${currentImageIndex + 1}`}
-                    className="w-full h-full object-cover"
+                    layout="fill"
+                    objectFit="cover"
+                    priority={true}
                   />
                   {fileUrls.length > 1 && (
                     <>
@@ -306,7 +341,7 @@ export default function PatentDetailPage() {
                             prev === 0 ? fileUrls.length - 1 : prev - 1
                           )
                         }
-                        className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full"
+                        className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full z-10"
                       >
                         &#10094;
                       </button>
@@ -316,7 +351,7 @@ export default function PatentDetailPage() {
                             prev === fileUrls.length - 1 ? 0 : prev + 1
                           )
                         }
-                        className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full"
+                        className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full z-10"
                       >
                         &#10095;
                       </button>
@@ -345,15 +380,15 @@ export default function PatentDetailPage() {
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
                   <span className="font-bold text-xl text-[#1a365d]">
                     ₩
-                    {post.price ?
-                      post.price.toLocaleString() :
-                      '가격 정보 없음'}
+                    {post.price
+                      ? post.price.toLocaleString()
+                      : '가격 정보 없음'}
                   </span>
                   <span
                     className={`${
-                      post.status === 'SALE' ?
-                        'bg-green-100 text-green-800' :
-                        'bg-red-100 text-red-800'
+                      post.status === 'SALE'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
                     } px-3 py-1 rounded-full`}
                   >
                     {statusMap[post.status] || post.status}
@@ -361,7 +396,7 @@ export default function PatentDetailPage() {
                   <span className="text-gray-500">
                     찜: {post.favoriteCnt}
                   </span>
-                   <span className="text-gray-500">
+                  <span className="text-gray-500">
                     작성자: {post.ownerName || '정보 없음'}
                   </span>
                   <span className="text-gray-500">
@@ -384,10 +419,14 @@ export default function PatentDetailPage() {
               <div className="mb-6">
                 <h3 className="font-bold text-[#1a365d] mb-3">첨부 파일</h3>
                 <ul className="list-disc list-inside space-y-2">
-                  {post.files.map((file: any) => (
+                  {post.files.map((file: FileUploadResponse) => (
                     <li key={file.id} className="text-gray-700">
                       <a
-                        href={file.fileUrl.startsWith('http') ? file.fileUrl : `${apiClient.defaults.baseURL || ''}${file.fileUrl}`}
+                        href={
+                          file.fileUrl.startsWith('http')
+                            ? file.fileUrl
+                            : `${apiClient.defaults.baseURL || ''}${file.fileUrl}`
+                        }
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:underline"
@@ -402,6 +441,15 @@ export default function PatentDetailPage() {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
+              {post.status === 'SALE' && (
+                <button
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleBuy}
+                  disabled={isBuying}
+                >
+                  {isBuying ? '구매 요청 중...' : '구매하기'}
+                </button>
+              )}
               <button
                 className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handlePurchaseInquiry}

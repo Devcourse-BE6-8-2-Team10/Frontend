@@ -13,7 +13,6 @@ export default function TradeHistory({ onTradeSelect }: TradeHistoryProps) {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
 
   const fetchTrades = async (page: number = 0) => {
     try {
@@ -21,7 +20,6 @@ export default function TradeHistory({ onTradeSelect }: TradeHistoryProps) {
       const response = await tradeAPI.getMyTrades(page, 10);
       setTrades(response.content);
       setTotalPages(response.totalPages);
-      setTotalElements(response.totalElements);
       setCurrentPage(response.page);
     } catch (err) {
       setError('거래내역을 불러오는데 실패했습니다.');

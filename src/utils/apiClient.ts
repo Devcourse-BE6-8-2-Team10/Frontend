@@ -104,21 +104,54 @@ export const chatAPI = {
 // 특허 관련 API 함수들
 export const patentAPI = {
   // 최근 등록된 특허 목록 조회
-  getRecentPatents: async (): Promise<any[]> => {
+  getRecentPatents: async (): Promise<Array<{
+    id: number;
+    title: string;
+    description: string;
+    category: string;
+    price: number;
+    status: string;
+    createdAt: string;
+  }>> => {
     const response = await apiClient.get("/api/posts");
     return response.data;
   },
 
   // 인기 특허 목록 조회
-  getPopularPatents: async (): Promise<any[]> => {
+  getPopularPatents: async (): Promise<Array<{
+    id: number;
+    title: string;
+    description: string;
+    category: string;
+    price: number;
+    status: string;
+    createdAt: string;
+  }>> => {
     const response = await apiClient.get("/api/posts/popular");
     return response.data;
   },
 
   // 특정 게시글의 파일 목록 조회
-  getPostFiles: async (postId: number): Promise<any[]> => {
+  getPostFiles: async (postId: number): Promise<Array<{
+    id: number;
+    fileName: string;
+    fileUrl: string;
+    fileSize: number;
+  }>> => {
     const response = await apiClient.get(`/api/posts/${postId}/files`);
     return response.data.data || []; // 데이터 구조에 따라 .data를 추가
+  },
+
+  // 내 특허 목록 조회
+  getMyPatents: async (): Promise<any[]> => {
+    const response = await apiClient.get("/api/posts/me");
+    return response.data;
+  },
+
+  // 찜한 특허 목록 조회
+  getLikedPatents: async (): Promise<any[]> => {
+    const response = await apiClient.get("/api/likes/me");
+    return response.data;
   },
 };
 
@@ -134,7 +167,15 @@ export const memberAPI = {
   },
 
   // 마이페이지 정보 조회
-  getMyPageInfo: async (): Promise<any> => {
+  getMyPageInfo: async (): Promise<{
+    id: number;
+    email: string;
+    name: string;
+    role: string;
+    profileUrl?: string;
+    status: string;
+    createdAt: string;
+  }> => {
     const response = await apiClient.get('/api/members/me');
     return response.data;
   },
@@ -142,6 +183,48 @@ export const memberAPI = {
   // 회원 탈퇴
   deleteAccount: async (): Promise<void> => {
     await apiClient.delete('/api/members/me');
+  },
+
+  // 회원 확인 (비밀번호 찾기용)
+  verifyMember: async (data: {
+    name: string;
+    email: string;
+  }): Promise<void> => {
+    // 인증 없이 직접 호출 (비밀번호 찾기는 인증이 필요하지 않음)
+    const response = await fetch(`${apiClient.defaults.baseURL}/api/members/verify-member`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || '회원 확인에 실패했습니다.');
+    }
+  },
+
+  // 비밀번호 찾기 및 변경
+  findAndUpdatePassword: async (data: {
+    name: string;
+    email: string;
+    newPassword: string;
+    confirmPassword: string;
+  }): Promise<void> => {
+    // 인증 없이 직접 호출 (비밀번호 찾기는 인증이 필요하지 않음)
+    const response = await fetch(`${apiClient.defaults.baseURL}/api/members/find-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || '비밀번호 변경에 실패했습니다.');
+    }
   },
 };
 
@@ -166,6 +249,10 @@ export const tradeAPI = {
   getTradeDetail: async (tradeId: number): Promise<TradeDetailDto> => {
     const response = await apiClient.get(`/api/trades/${tradeId}`);
     return response.data.data;
+  },
+  // 거래 생성
+  createTrade: async (postId: number): Promise<void> => {
+    await apiClient.post("/api/trades", { postId });
   },
 };
 
@@ -195,13 +282,33 @@ export interface TradeDetailDto {
 // 관리자 관련 API 함수들
 export const adminAPI = {
   // 전체 회원 목록 조회 (관리자 전용)
-  getAllMembers: async (): Promise<any> => {
+  getAllMembers: async (): Promise<{ data: { content: Array<{
+    id: number;
+    email: string;
+    name: string;
+    role: string;
+    profileUrl?: string;
+    status: string;
+    createdAt: string;
+    modifiedAt?: string;
+    deletedAt?: string;
+  }> } }> => {
     const response = await apiClient.get('/api/admin/members');
     return response.data;
   },
 
   // 회원 상세 정보 조회 (관리자 전용)
-  getMemberDetail: async (memberId: number): Promise<any> => {
+  getMemberDetail: async (memberId: number): Promise<{ data: {
+    id: number;
+    email: string;
+    name: string;
+    role: string;
+    profileUrl?: string;
+    status: string;
+    createdAt: string;
+    modifiedAt?: string;
+    deletedAt?: string;
+  } }> => {
     const response = await apiClient.get(`/api/admin/members/${memberId}`);
     return response.data;
   },
@@ -220,9 +327,20 @@ export const adminAPI = {
     await apiClient.delete(`/api/admin/members/${memberId}`);
   },
 
-  // 전체 특허 목록 조회 (관리자 전용)
-  getAllPatents: async (): Promise<any> => {
-    const response = await apiClient.get('/api/posts');
+  // 모든 특허 조회 (관리자 전용)
+  getAllPatents: async (): Promise<{ data: { content: Array<{
+    id: number;
+    title: string;
+    description: string;
+    category: string;
+    price: number;
+    createdAt: string;
+    modifiedAt?: string;
+    favoriteCnt: number;
+    authorId: number;
+    authorName?: string;
+  }> } }> => {
+    const response = await apiClient.get('/api/admin/patents');
     return response.data;
   },
 
@@ -230,9 +348,27 @@ export const adminAPI = {
   updatePatentByAdmin: async (patentId: number, data: {
     title?: string;
     description?: string;
-    status?: string;
+    category?: string;
+    price?: number;
   }): Promise<void> => {
     await apiClient.patch(`/api/admin/patents/${patentId}`, data);
+  },
+
+  // 특허 상세 정보 조회 (관리자 전용)
+  getPatentDetail: async (patentId: number): Promise<{ data: {
+    id: number;
+    title: string;
+    description: string;
+    category: string;
+    price: number;
+    createdAt: string;
+    modifiedAt?: string;
+    favoriteCnt: number;
+    authorId: number;
+    authorName?: string;
+  } }> => {
+    const response = await apiClient.get(`/api/admin/patents/${patentId}`);
+    return response.data;
   },
 
   // 특허 삭제 (관리자 전용)
@@ -240,5 +376,7 @@ export const adminAPI = {
     await apiClient.delete(`/api/admin/patents/${patentId}`);
   },
 };
+
+
 
 export default apiClient;

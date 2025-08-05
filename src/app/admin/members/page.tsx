@@ -65,17 +65,20 @@ export default function AdminMembersPage() {
 
   // 정렬된 회원 목록
   const sortedMembers = [...filteredMembers].sort((a, b) => {
-    let aValue: any = a[sortBy as keyof Member];
-    let bValue: any = b[sortBy as keyof Member];
+    let aValue: string | number | undefined;
+    let bValue: string | number | undefined;
     
-         if (sortBy === 'createdAt') {
-       aValue = new Date(a.createdAt).getTime();
-       bValue = new Date(b.createdAt).getTime();
-           } else if (sortBy === 'modifiedAt') {
-        aValue = a.modifiedAt ? new Date(a.modifiedAt).getTime() : 0;
-        bValue = b.modifiedAt ? new Date(b.modifiedAt).getTime() : 0;
-      }
-    
+    if (sortBy === 'createdAt') {
+      aValue = new Date(a.createdAt).getTime();
+      bValue = new Date(b.createdAt).getTime();
+    } else if (sortBy === 'modifiedAt') {
+      aValue = a.modifiedAt ? new Date(a.modifiedAt).getTime() : 0;
+      bValue = b.modifiedAt ? new Date(b.modifiedAt).getTime() : 0;
+    } else {
+      aValue = a[sortBy as keyof Member] as string;
+      bValue = b[sortBy as keyof Member] as string;
+    }
+  
     if (sortOrder === 'asc') {
       return aValue > bValue ? 1 : -1;
     } else {

@@ -70,13 +70,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // 사용자 정보를 서버에서 가져오는 함수
-  const fetchUserInfo = useCallback(async () => {
+  // 사용자 정보 가져오기 함수
+  const fetchUserInfo = useCallback(async (): Promise<User | null> => {
     try {
-      const response = await apiClient.get('/api/auth/me');
+      const response = await apiClient.get('/api/members/me');
       
       if (response.data.data) {
-        const userData = {
+        const userData: User = {
           id: response.data.data.id,
           email: response.data.data.email,
           name: response.data.data.name,
@@ -87,13 +87,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return userData;
       }
       return null;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as { response?: { status?: number } };
       // 401/403 오류는 정상적인 상황 (로그인되지 않은 상태)
-      if (error.response?.status === 401 || error.response?.status === 403) {
+      if (apiError.response?.status === 401 || apiError.response?.status === 403) {
         console.log('User not authenticated');
         return null;
       }
-      console.error('Failed to fetch user info:', error);
+      console.error('Failed to fetch user info:', apiError);
       return null;
     }
   }, []);
@@ -164,7 +165,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     checkAuthStatus();
-  }, []);
+  }, [fetchUserInfo]);
 
   // 인증 데이터 정리 함수
   const clearAuthData = () => {

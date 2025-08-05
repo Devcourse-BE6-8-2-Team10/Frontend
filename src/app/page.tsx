@@ -1,6 +1,7 @@
 'use client';
 
 import Image from "next/image";
+import Link from "next/link"; // Import the Link component
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { patentAPI } from "@/utils/apiClient";
@@ -159,18 +160,18 @@ export default function Home() {
             </p>
             {!isAuthenticated && (
               <div className="mt-6">
-                <a 
+                <Link 
                   href="/login" 
                   className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors font-medium mr-4"
                 >
                   로그인
-                </a>
-                <a 
+                </Link>
+                <Link 
                   href="/register" 
                   className="bg-transparent border-2 border-purple-600 text-purple-600 hover:bg-purple-600 hover:text-white px-6 py-3 rounded-lg transition-colors font-medium"
                 >
                   회원가입
-                </a>
+                </Link>
               </div>
             )}
           </div>
@@ -207,12 +208,12 @@ export default function Home() {
               <span className="text-yellow-400 text-lg">🔥</span>
               ◆인기 특허
             </h2>
-            <a href="/patents" className="text-white hover:text-gray-300 transition-colors text-sm">전체보기 →</a>
+            <Link href="/patents" className="text-white hover:text-gray-300 transition-colors text-sm">전체보기 →</Link>
           </div>
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {popularPatents.map((patent) => (
-                  <a key={patent.id} href={`/patents/${patent.id}`} className="border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1 bg-white/50 flex flex-col">
+                  <Link key={patent.id} href={`/patents/${patent.id}`} className="border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1 bg-white/50 flex flex-col">
                     <div className="w-full h-32 bg-gray-200 rounded-lg mb-3 overflow-hidden">
                       {patent.imageUrl ? (
                         <Image src={patent.imageUrl} alt={patent.title} width={300} height={200} className="w-full h-full object-cover" />
@@ -233,7 +234,7 @@ export default function Home() {
                         <button className="text-gray-400 hover:text-blue-500 transition-colors text-sm">📤</button>
                       </div>
                     </div>
-                  </a>
+                  </Link>
               ))}
             </div>
           </div>
@@ -248,12 +249,12 @@ export default function Home() {
               <span className="bg-red-500 text-white px-2 py-1 rounded text-xs">NEW</span>
               최근 등록된 특허
             </h2>
-            <a href="/patents" className="text-white hover:text-gray-300 transition-colors text-sm">전체보기 →</a>
+            <Link href="/patents" className="text-white hover:text-gray-300 transition-colors text-sm">전체보기 →</Link>
           </div>
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {recentPatents.map((patent) => (
-                <a key={patent.id} href={`/patents/${patent.id}`} className="border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1 bg-white/50 flex flex-col">
+                <Link key={patent.id} href={`/patents/${patent.id}`} className="border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1 bg-white/50 flex flex-col">
                   <div className="w-full h-32 bg-gray-200 rounded-lg mb-3 overflow-hidden">
                     {patent.imageUrl ? (
                       <Image src={patent.imageUrl} alt={patent.title} width={300} height={200} className="w-full h-full object-cover" />
@@ -274,7 +275,7 @@ export default function Home() {
                       <button className="text-gray-400 hover:text-blue-500 transition-colors text-sm">📤</button>
                     </div>
                   </div>
-                </a>
+                </Link>
               ))}
             </div>
           </div>
