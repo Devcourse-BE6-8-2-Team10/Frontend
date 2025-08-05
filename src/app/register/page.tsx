@@ -75,7 +75,7 @@ export default function RegisterPage() {
     }
 
     try {
-      await apiClient.post('/api/auth/signup', {
+      // 중복된 라인 수정
       await apiClient.post('/api/auth/signup', {
         name: formData.name,
         email: formData.email,
