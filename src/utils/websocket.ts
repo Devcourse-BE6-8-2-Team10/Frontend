@@ -32,7 +32,7 @@ class WebSocketService {
         console.log("WebSocket 연결 시도...");
 
         this.client = new Client({
-          webSocketFactory: () => new SockJS("http://localhost:8080/chat"),
+          webSocketFactory: () => new SockJS("http://34.64.160.179:8080/chat"),
           connectHeaders: {
             "user-email": userEmail
           },
@@ -76,7 +76,7 @@ class WebSocketService {
   public disconnect(): void {
     console.log("=== WebSocket 연결 해제 시작 ===");
     console.log("현재 구독 중인 채팅방 수:", this.subscriptions.size);
-    
+
     if (this.client) {
       this.subscriptions.forEach((subscription, roomId) => {
         console.log(`채팅방 ${roomId} 구독 해제`);
@@ -84,7 +84,7 @@ class WebSocketService {
       });
       this.subscriptions.clear();
       console.log("모든 구독 해제 완료");
-      
+
       this.client.deactivate();
       this.client = null;
       this.isConnected = false;
@@ -98,7 +98,7 @@ class WebSocketService {
     onMessage: (message: ChatMessage) => void
   ): void {
     console.log(`=== 채팅방 ${roomId} 구독 시도 ===`);
-    
+
     if (!this.client || !this.isConnected) {
       console.error("WebSocket이 연결되지 않았습니다.");
       return;
@@ -128,7 +128,7 @@ class WebSocketService {
 
     this.subscriptions.set(roomId, subscription);
     console.log(`✅ 채팅방 ${roomId} 구독 완료, 총 구독 수: ${this.subscriptions.size}`);
-    
+
     // 현재 구독 중인 채팅방 목록 출력
     console.log("현재 구독 중인 채팅방들:", Array.from(this.subscriptions.keys()));
   }

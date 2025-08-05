@@ -8,7 +8,7 @@ import { getAccessTokenCookie, clearAccessTokenCookie, clearRefreshTokenCookie }
 
 // axios 인스턴스 생성
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080",
+  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || "http://34.64.160.179:8080",
   headers: {
     "Content-Type": "application/json",
   },
