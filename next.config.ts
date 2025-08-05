@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'www.devteam10.org',
-        port: '8080',
+        port: '',
         pathname: '/files/**',
       },
       {
