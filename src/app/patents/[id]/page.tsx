@@ -12,6 +12,9 @@ import { tradeAPI } from '@/utils/apiClient';
 const statusMap: { [key: string]: string } = {
   SALE: '판매중',
   SOLD_OUT: '판매완료',
+  SOLD: '판매완료',
+  RESERVED: '예약중',
+  AVAILABLE: '판매중',
 };
 
 interface FileUploadResponse {
@@ -439,9 +442,19 @@ export default function PatentDetailPage() {
               </div>
             )}
 
+            {/* Debug: Post Status */}
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                <strong>Debug Info:</strong> Post Status = "{post.status}" | 
+                Show Buy Button = {(post.status === 'SALE').toString()} |
+                Owner = {post.ownerName} | Current User = {user?.name}
+              </p>
+            </div>
+
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
-              {post.status === 'SALE' && (
+              {/* 구매하기 버튼 - 판매 가능한 상태이고 본인 게시글이 아닐 때만 표시 */}
+              {(post.status === 'SALE' || post.status === 'AVAILABLE') && user?.name !== post.ownerName && (
                 <button
                   className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handleBuy}
@@ -450,13 +463,18 @@ export default function PatentDetailPage() {
                   {isBuying ? '구매 요청 중...' : '구매하기'}
                 </button>
               )}
-              <button
-                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handlePurchaseInquiry}
-                disabled={isCreatingRoom}
-              >
-                {isCreatingRoom ? '채팅방 생성 중...' : '구매 문의'}
-              </button>
+              
+              {/* 구매 문의 버튼 - 본인 게시글이 아닐 때만 표시 */}
+              {user?.name !== post.ownerName && (
+                <button
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handlePurchaseInquiry}
+                  disabled={isCreatingRoom}
+                >
+                  {isCreatingRoom ? '채팅방 생성 중...' : '구매 문의'}
+                </button>
+              )}
+              
               <button
                 className="border border-purple-600 text-purple-600 hover:bg-purple-600 hover:text-white px-6 py-3 rounded-lg transition-colors flex-1"
                 onClick={toggleLike}
