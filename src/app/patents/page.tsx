@@ -30,7 +30,7 @@ const getFullImageUrl = (url?: string): string | undefined => {
 };
 
 export default function PatentsPage() {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated } = useAuth(); // 'authLoading' was removed as it was unused
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,8 +46,12 @@ export default function PatentsPage() {
           imageUrl: getFullImageUrl(post.imageUrl)
         }));
         setPosts(postsWithFullImageUrl);
-      } catch (error: any) {
-        console.error('게시글 목록 조회 실패:', error);
+      } catch (error) { // Changed 'any' to 'unknown' for better type safety
+        if (error instanceof Error) {
+            console.error('게시글 목록 조회 실패:', error.message);
+        } else {
+            console.error('게시글 목록 조회 실패:', error);
+        }
       } finally {
         setLoading(false);
       }
@@ -71,8 +75,8 @@ export default function PatentsPage() {
       const response = await apiClient[method](`/api/likes/${postId}`);
 
       if (response.status === 200) {
-        setPosts(posts.map(p => 
-          p.id === postId 
+        setPosts(posts.map(p =>
+          p.id === postId
             ? { ...p, isLiked: !p.isLiked, favoriteCnt: p.isLiked ? p.favoriteCnt - 1 : p.favoriteCnt + 1 }
             : p
         ));
@@ -111,14 +115,14 @@ export default function PatentsPage() {
         <div className="max-w-7xl mx-auto">
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 mb-6 shadow-xl">
             <div className="flex gap-3 mb-4">
-              <input 
-                type="text" 
-                placeholder="게시글 제목으로 검색하세요..." 
+              <input
+                type="text"
+                placeholder="게시글 제목으로 검색하세요..."
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-              <select 
+              <select
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
@@ -156,7 +160,7 @@ export default function PatentsPage() {
                         {post.status && <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">{post.status}</span>}
                       </div>
                       <div className="flex gap-2 items-center mt-2">
-                        <button 
+                        <button
                           className="text-gray-400 hover:text-red-500 transition-colors text-sm"
                           onClick={(e) => {
                             e.preventDefault();

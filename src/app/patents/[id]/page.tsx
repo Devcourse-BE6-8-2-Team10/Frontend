@@ -5,6 +5,8 @@ import apiClient from '@/utils/apiClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChat } from '@/contexts/ChatContext';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link'; // next/link에서 Link를 가져옵니다.
+import Image from 'next/image'; // next/image에서 Image를 가져옵니다.
 import { tradeAPI } from '@/utils/apiClient';
 
 interface FileUploadResponse {
@@ -80,7 +82,7 @@ const fetchPostDetail = async (postId: string) => {
   };
 };
 
-const fetchFiles = async (postId: string) => {
+const fetchFiles = async (postId: string): Promise<FileUploadResponse[]> => {
   try {
     const response = await apiClient.get(`/api/posts/${postId}/files`);
     return response.data.data || [];
@@ -95,7 +97,7 @@ export default function PatentDetailPage() {
   const { ensureConnected, refreshChatRooms } = useChat(); // refreshChatRooms 추가
   const router = useRouter();
   const params = useParams();
-  const postId = params.id;
+  const postId = params.id as string;
 
   const [post, setPost] = useState<PostDetail | null>(null);
   const [fileUrls, setFileUrls] = useState<string[]>([]);
@@ -113,11 +115,12 @@ export default function PatentDetailPage() {
         const loadPostAndFiles = async () => {
           setLoading(true);
           try {
-            const postData = await fetchPostDetail(postId as string);
+            const postData = await fetchPostDetail(postId);
             setPost(postData);
 
-            const filesData = await fetchFiles(postId as string);
-            const fullFileUrls = filesData.map((f: any) => {
+            const filesData = await fetchFiles(postId);
+            // 'any' 타입을 'FileUploadResponse'로 수정
+            const fullFileUrls = filesData.map((f: FileUploadResponse) => {
                 if (f.fileUrl.startsWith('http')) {
                     return f.fileUrl;
                 }
@@ -140,13 +143,12 @@ export default function PatentDetailPage() {
 
   // 구매 문의 기능
   const handlePurchaseInquiry = async () => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !post) {
       alert('로그인이 필요합니다.');
       router.push('/login');
       return;
     }
 
-    // 이미 채팅방 생성 중이면 중복 호출 방지
     if (isCreatingRoom) {
       console.log('이미 채팅방 생성 중입니다.');
       return;
@@ -155,49 +157,46 @@ export default function PatentDetailPage() {
     setIsCreatingRoom(true);
 
     try {
-      // WebSocket 연결 확인 및 자동 연결
       console.log("구매 문의 - WebSocket 연결 확인");
       await ensureConnected();
 
-      // 백엔드 API 호출하여 채팅방 생성 또는 기존 채팅방 ID 반환
       const response = await apiClient.post(`/api/chat/rooms/${post.id}`);
       
       if (response.data.resultCode === "200") {
         const chatRoomId = response.data.data;
         console.log("채팅방 ID:", chatRoomId);
         
-        // 채팅방 생성 후 ChatContext의 채팅방 목록을 새로고침
         try {
           console.log("채팅방 목록 새로고침 시작");
-          await refreshChatRooms(); // ChatContext의 refreshChatRooms 함수 호출
+          await refreshChatRooms();
           console.log("채팅방 목록 새로고침 완료");
           
-          // 짧은 지연 후 페이지 이동 (WebSocket 구독 완료 대기)
           setTimeout(() => {
             router.push(`/chat?roomId=${chatRoomId}`);
           }, 300);
           
         } catch (refreshError) {
           console.error('채팅방 목록 새로고침 실패:', refreshError);
-          // 새로고침 실패해도 페이지는 이동
           router.push(`/chat?roomId=${chatRoomId}`);
         }
       } else {
         alert('채팅방 생성에 실패했습니다.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('채팅방 생성 실패:', error);
       if (error.response?.data?.msg?.includes('이미 존재')) {
-        // 이미 채팅방이 존재하는 에러인 경우, 기존 채팅방을 찾아서 이동
         try {
           const roomsResponse = await apiClient.get('/api/chat/rooms/my');
           const rooms = roomsResponse.data.data;
-          // 해당 게시글과 관련된 채팅방 찾기 (임시로 가장 최근 채팅방으로 이동)
           if (rooms && rooms.length > 0) {
-            // 약간의 지연 후 이동
-            setTimeout(() => {
-              router.push(`/chat?roomId=${rooms[0].id}`);
-            }, 300);
+            const existingRoom = rooms.find((room: any) => room.postId === post.id);
+            if (existingRoom) {
+              setTimeout(() => {
+                router.push(`/chat?roomId=${existingRoom.id}`);
+              }, 300);
+            } else {
+               alert('관련 채팅방을 찾을 수 없습니다. 새로운 채팅방을 다시 시도해주세요.');
+            }
           } else {
             alert('채팅방을 찾을 수 없습니다.');
           }
@@ -292,29 +291,31 @@ export default function PatentDetailPage() {
     <div className="pb-10">
       <section className="px-6 py-8">
         <div className="max-w-4xl mx-auto">
-          {/* Breadcrumb */}
+          {/* Breadcrumb: <a> 태그를 <Link>로 수정 */}
           <div className="text-gray-400 text-sm mb-6">
-            <a href="/" className="hover:text-gray-200">
+            <Link href="/" className="hover:text-gray-200">
               홈
-            </a>
-            &gt;
-            <a href="/patents" className="hover:text-gray-200">
+            </Link>
+            &nbsp;&gt;&nbsp;
+            <Link href="/patents" className="hover:text-gray-200">
               특허목록
-            </a>
-            &gt;
+            </Link>
+            &nbsp;&gt;&nbsp;
             <span>특허 상세</span>
           </div>
 
           {/* Patent Detail Card */}
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-8 shadow-xl">
-            {/* Image Slider */}
-            <div className="relative w-full h-64 mb-6 bg-gray-200 rounded-lg overflow-hidden">
+            {/* Image Slider: <img>를 <Image>로 수정 */}
+            <div className="relative w-full h-64 md:h-80 mb-6 bg-gray-200 rounded-lg overflow-hidden">
               {fileUrls.length > 0 ? (
                 <>
-                  <img
+                  <Image
                     src={fileUrls[currentImageIndex]}
                     alt={`Patent image ${currentImageIndex + 1}`}
-                    className="w-full h-full object-cover"
+                    layout="fill"
+                    objectFit="cover"
+                    priority={true} // 첫 이미지는 우선적으로 로드
                   />
                   {fileUrls.length > 1 && (
                     <>
@@ -324,7 +325,7 @@ export default function PatentDetailPage() {
                             prev === 0 ? fileUrls.length - 1 : prev - 1
                           )
                         }
-                        className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full"
+                        className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full z-10"
                       >
                         &#10094;
                       </button>
@@ -334,7 +335,7 @@ export default function PatentDetailPage() {
                             prev === fileUrls.length - 1 ? 0 : prev + 1
                           )
                         }
-                        className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full"
+                        className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full z-10"
                       >
                         &#10095;
                       </button>
@@ -374,8 +375,9 @@ export default function PatentDetailPage() {
                         'bg-red-100 text-red-800'
                     } px-3 py-1 rounded-full`}
                   >
-                    {post.status}
+                    {post.status === 'SALE' ? '판매중' : '판매완료'}
                   </span>
+
                   <span className="text-gray-500">
                     찜: {post.favoriteCnt}
                   </span>
@@ -402,7 +404,8 @@ export default function PatentDetailPage() {
               <div className="mb-6">
                 <h3 className="font-bold text-[#1a365d] mb-3">첨부 파일</h3>
                 <ul className="list-disc list-inside space-y-2">
-                  {post.files.map((file: any) => (
+                  {/* 'any' 타입을 'FileUploadResponse'로 수정 */}
+                  {post.files.map((file: FileUploadResponse) => (
                     <li key={file.id} className="text-gray-700">
                       <a
                         href={file.fileUrl.startsWith('http') ? file.fileUrl : `${apiClient.defaults.baseURL}${file.fileUrl}`}
