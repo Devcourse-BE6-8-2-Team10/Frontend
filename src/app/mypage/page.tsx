@@ -56,15 +56,16 @@ export default function MyPage() {
     const fetchCompletedTrades = async () => {
       if (!isAuthenticated) return;
       try {
+        console.log('Fetching completed trades...');
         setCompletedTradesLoading(true);
-        // 'any' 대신 명확한 Trade 타입 사용
-        const response = await apiClient.get<{ data: { content: Trade[] } }>('/api/trades', {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
+        setCompletedTradesError(null);
+        
+        const response = await apiClient.get<{ data: { content: Trade[] } }>('/api/trades');
+        console.log('Completed trades response:', response.data);
+        
         const completed = (response.data.data?.content || []).filter((trade: Trade) => trade.status === 'COMPLETED');
         setCompletedTradesCount(completed.length);
+        console.log('Completed trades count:', completed.length);
       } catch (error) {
         console.error('Failed to fetch completed trades:', error);
         setCompletedTradesError('거래 완료 내역을 불러오는 데 실패했습니다.');
@@ -76,19 +77,21 @@ export default function MyPage() {
     if (isAuthenticated) {
       fetchCompletedTrades();
     }
-  }, [isAuthenticated, accessToken]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const fetchMyPatents = async () => {
       if (!isAuthenticated) return;
       try {
+        console.log('Fetching my patents...');
         setMyPatentsLoading(true);
-        const response = await apiClient.get<{data: PostListDTO[]}>('/api/posts/me', {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-        setMyPatents(response.data.data || []);
+        setMyPatentsError(null);
+        
+        const response = await apiClient.get<{data: PostListDTO[]}>('/api/posts/me');
+        console.log('My patents response:', response.data);
+        
+        setMyPatents(response.data.data || response.data || []);
+        console.log('My patents count:', (response.data.data || response.data || []).length);
       } catch (error) {
         console.error('Failed to fetch my patents:', error);
         setMyPatentsError('내 특허를 불러오는 데 실패했습니다.');
@@ -100,13 +103,15 @@ export default function MyPage() {
     const fetchLikedPatents = async () => {
       if (!isAuthenticated) return;
       try {
+        console.log('Fetching liked patents...');
         setLikedPatentsLoading(true);
-        const response = await apiClient.get<{data: PostListDTO[]}>('/api/likes/me', {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-        setLikedPatents(response.data.data || []);
+        setLikedPatentsError(null);
+        
+        const response = await apiClient.get<{data: PostListDTO[]}>('/api/likes/me');
+        console.log('Liked patents response:', response.data);
+        
+        setLikedPatents(response.data.data || response.data || []);
+        console.log('Liked patents count:', (response.data.data || response.data || []).length);
       } catch (error) {
         console.error('Failed to fetch liked patents:', error);
         setLikedPatentsError('찜한 특허를 불러오는 데 실패했습니다.');
@@ -119,22 +124,25 @@ export default function MyPage() {
       fetchMyPatents();
       fetchLikedPatents();
     }
-  }, [isAuthenticated, accessToken]);
+  }, [isAuthenticated]);
 
   // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
   useEffect(() => {
     if (!loading && !isAuthenticated) {
+      console.log('User not authenticated, redirecting to login');
       router.push('/login');
     }
   }, [isAuthenticated, loading, router]);
 
-  // 페이지 로드 시 한 번만 사용자 정보 새로고침 (무한루프 방지)
+  // AuthContext의 사용자 정보 로깅
   useEffect(() => {
-    if (isAuthenticated && user) {
-      // 이미 사용자 정보가 있으면 새로고침하지 않음
-      return;
-    }
-  }, [isAuthenticated, user]);
+    console.log('Auth state changed:', {
+      isAuthenticated,
+      user: user ? { id: user.id, name: user.name, email: user.email } : null,
+      loading,
+      accessToken: accessToken ? 'present' : 'missing'
+    });
+  }, [isAuthenticated, user, loading, accessToken]);
 
   const handleImageChangeClick = () => {
     fileInputRef.current?.click();
@@ -154,7 +162,6 @@ export default function MyPage() {
       await apiClient.post(`/api/members/${user?.id}/profile-image`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${accessToken}`
         },
       });
 
@@ -177,7 +184,12 @@ export default function MyPage() {
             <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-                <p className="mt-4 text-gray-600">로딩 중...</p>
+                <p className="mt-4 text-gray-600">
+                  {loading ? '로딩 중...' : '인증 확인 중...'}
+                </p>
+                <p className="mt-2 text-sm text-gray-400">
+                  Debug: loading={loading.toString()}, isAuthenticated={isAuthenticated.toString()}
+                </p>
               </div>
             </div>
           </div>
@@ -254,19 +266,21 @@ export default function MyPage() {
                   {myPatentsLoading ? '...' : myPatentsError ? '오류' : myPatents.length}
                 </div>
                 <div className="text-sm text-gray-600">내 특허</div>
+                {myPatentsError && <div className="text-xs text-red-500 mt-1">{myPatentsError}</div>}
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="text-2xl font-bold text-[#1a365d]">
                   {likedPatentsLoading ? '...' : likedPatentsError ? '오류' : likedPatents.length}
                 </div>
-
                 <div className="text-sm text-gray-600">찜한 특허</div>
+                {likedPatentsError && <div className="text-xs text-red-500 mt-1">{likedPatentsError}</div>}
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="text-2xl font-bold text-[#1a365d]">
                   {completedTradesLoading ? '...' : completedTradesError ? '오류' : completedTradesCount}
                 </div>
                 <div className="text-sm text-gray-600">거래 완료</div>
+                {completedTradesError && <div className="text-xs text-red-500 mt-1">{completedTradesError}</div>}
               </div>
             </div>
           </div>
