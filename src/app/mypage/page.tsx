@@ -1,13 +1,14 @@
 'use client';
 
-
 import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import apiClient from "@/utils/apiClient";
 import TradeHistory from "@/components/trade/TradeHistory";
 import TradeDetail from "@/components/trade/TradeDetail";
+import Image from "next/image"; // next/image에서 Image를 가져옵니다.
 
+// 내가 등록/찜한 특허 목록 타입
 interface PostListDTO {
   id: number;
   title: string;
@@ -23,6 +24,14 @@ interface PostListDTO {
   memberName: string;
   memberProfileImageUrl: string;
   isFavorite: boolean;
+}
+
+// 거래 내역 타입 정의
+interface Trade {
+  id: number;
+  status: string;
+  // API 응답에 따라 필요한 다른 속성들을 추가할 수 있습니다.
+  // 예: postTitle: string;
 }
 
 export default function MyPage() {
@@ -48,12 +57,13 @@ export default function MyPage() {
       if (!isAuthenticated) return;
       try {
         setCompletedTradesLoading(true);
-        const response = await apiClient.get<{ data: { content: any[] } }>('/api/trades', {
+        // 'any' 대신 명확한 Trade 타입 사용
+        const response = await apiClient.get<{ data: { content: Trade[] } }>('/api/trades', {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         });
-        const completed = response.data.data.content.filter((trade: any) => trade.status === 'COMPLETED');
+        const completed = response.data.data.content.filter((trade: Trade) => trade.status === 'COMPLETED');
         setCompletedTradesCount(completed.length);
       } catch (error) {
         console.error('Failed to fetch completed trades:', error);
@@ -73,12 +83,12 @@ export default function MyPage() {
       if (!isAuthenticated) return;
       try {
         setMyPatentsLoading(true);
-        const response = await apiClient.get<PostListDTO[]>('/api/posts/me', {
+        const response = await apiClient.get<{data: PostListDTO[]}>('/api/posts/me', {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         });
-        setMyPatents(response.data);
+        setMyPatents(response.data.data);
       } catch (error) {
         console.error('Failed to fetch my patents:', error);
         setMyPatentsError('내 특허를 불러오는 데 실패했습니다.');
@@ -91,12 +101,12 @@ export default function MyPage() {
       if (!isAuthenticated) return;
       try {
         setLikedPatentsLoading(true);
-        const response = await apiClient.get<PostListDTO[]>('/api/likes/me', {
+        const response = await apiClient.get<{data: PostListDTO[]}>('/api/likes/me', {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         });
-        setLikedPatents(response.data);
+        setLikedPatents(response.data.data);
       } catch (error) {
         console.error('Failed to fetch liked patents:', error);
         setLikedPatentsError('찜한 특허를 불러오는 데 실패했습니다.');
@@ -119,12 +129,12 @@ export default function MyPage() {
     }
   }, [isAuthenticated, loading, router]);
 
-  // 페이지 로드 시 한 번만 사용자 정보 새로고침
+  // 페이지 로드 시 사용자 정보 새로고침 (의존성 배열 수정)
   useEffect(() => {
     if (isAuthenticated && user) {
       refreshUserInfo();
     }
-  }, []);
+  }, [isAuthenticated, user, refreshUserInfo]);
 
   const handleImageChangeClick = () => {
     fileInputRef.current?.click();
@@ -186,13 +196,16 @@ export default function MyPage() {
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 mb-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-4">
-                {/* Profile Image Section */}
+                {/* Profile Image Section: <img>를 <Image>로 수정 */}
                 <div className="relative">
                   {user?.profileUrl ? (
-                    <img
+                    <Image
                       src={`${user.profileUrl.startsWith('http') ? user.profileUrl : `${process.env.NEXT_PUBLIC_BACKEND_URL}${user.profileUrl}`}?t=${userUpdateTimestamp}`}
                       alt="Profile"
+                      width={96}
+                      height={96}
                       className="w-24 h-24 rounded-full object-cover"
+                      priority
                     />
                   ) : (
                     <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-400 to-indigo-600 flex items-center justify-center">
@@ -246,6 +259,7 @@ export default function MyPage() {
                 <div className="text-2xl font-bold text-[#1a365d]">
                   {likedPatentsLoading ? '...' : likedPatentsError ? '오류' : likedPatents.length}
                 </div>
+
                 <div className="text-sm text-gray-600">찜한 특허</div>
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
