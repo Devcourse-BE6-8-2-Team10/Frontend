@@ -143,6 +143,48 @@ export const memberAPI = {
   deleteAccount: async (): Promise<void> => {
     await apiClient.delete('/api/members/me');
   },
+
+  // 회원 확인 (비밀번호 찾기용)
+  verifyMember: async (data: {
+    name: string;
+    email: string;
+  }): Promise<void> => {
+    // 인증 없이 직접 호출 (비밀번호 찾기는 인증이 필요하지 않음)
+    const response = await fetch(`${apiClient.defaults.baseURL}/api/members/verify-member`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || '회원 확인에 실패했습니다.');
+    }
+  },
+
+  // 비밀번호 찾기 및 변경
+  findAndUpdatePassword: async (data: {
+    name: string;
+    email: string;
+    newPassword: string;
+    confirmPassword: string;
+  }): Promise<void> => {
+    // 인증 없이 직접 호출 (비밀번호 찾기는 인증이 필요하지 않음)
+    const response = await fetch(`${apiClient.defaults.baseURL}/api/members/find-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || '비밀번호 변경에 실패했습니다.');
+    }
+  },
 };
 
 // 거래 관련 API 함수들
@@ -251,5 +293,7 @@ export const adminAPI = {
     await apiClient.delete(`/api/admin/patents/${patentId}`);
   },
 };
+
+
 
 export default apiClient;
