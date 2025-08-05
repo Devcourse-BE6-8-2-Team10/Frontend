@@ -19,8 +19,8 @@ const nextConfig: NextConfig = {
     ],
   },
   env: {
-    NEXT_PUBLIC_BACKEND_URL: "https://www.devteam10.org:8080",
-    NEXT_PUBLIC_WEBSOCKET_URL: "wss://www.devteam10.org:8080/chat",
+    NEXT_PUBLIC_BACKEND_URL: "https://www.devteam10.org",
+    NEXT_PUBLIC_WEBSOCKET_URL: "wss://www.devteam10.org/chat",
     // 백엔드 주소
     // NEXT_PUBLIC_BACKEND_URL: "http://34.64.160.179:8080",
     // NEXT_PUBLIC_WEBSOCKET_URL: "ws://34.64.160.179:8080/chat",
