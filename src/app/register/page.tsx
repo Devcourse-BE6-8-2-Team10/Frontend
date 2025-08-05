@@ -4,6 +4,16 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import apiClient from "@/utils/apiClient";
+import Link from "next/link";
+
+// API 에러를 위한 보다 구체적인 타입 정의
+interface ApiError {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -65,7 +75,7 @@ export default function RegisterPage() {
     }
 
     try {
-      const response = await apiClient.post('/api/auth/signup', {
+      await apiClient.post('/api/auth/signup', {
         name: formData.name,
         email: formData.email,
         password: formData.password,
@@ -74,7 +84,8 @@ export default function RegisterPage() {
       // 회원가입 성공 시 회원가입 완료 페이지로 리다이렉트
       router.push("/register/success");
       
-    } catch (error: any) {
+    } catch (e: unknown) { // 'any' 대신 'unknown'을 사용하여 타입 안정성 확보
+      const error = e as ApiError; // 우리가 정의한 에러 타입으로 형변환
       if (error.response?.data?.message) {
         setError(error.response.data.message);
       } else {
@@ -177,8 +188,8 @@ export default function RegisterPage() {
                   required
                 />
                 <label htmlFor="agree" className="ml-2 text-sm text-gray-600">
-                  <a href="#" className="text-purple-600 hover:text-purple-700">이용약관</a>과{' '}
-                  <a href="#" className="text-purple-600 hover:text-purple-700">개인정보처리방침</a>에 동의합니다
+                  <Link href="/legal/terms" className="text-purple-600 hover:text-purple-700">이용약관</Link>과{' '}
+                  <Link href="/legal/privacy" className="text-purple-600 hover:text-purple-700">개인정보처리방침</Link>에 동의합니다
                 </label>
               </div>
               
@@ -194,9 +205,9 @@ export default function RegisterPage() {
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 이미 계정이 있으신가요?{' '}
-                <a href="/login" className="text-purple-600 hover:text-purple-700 font-medium">
+                <Link href="/login" className="text-purple-600 hover:text-purple-700 font-medium">
                   로그인
-                </a>
+                </Link>
               </p>
             </div>
             
