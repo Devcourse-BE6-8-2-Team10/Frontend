@@ -171,6 +171,7 @@ export default function MemberDetailModal({
                           className="rounded-full object-cover border border-gray-200"
                           onError={() => {
                             // 에러 처리
+                            setError('프로필 이미지를 불러올 수 없습니다.');
                           }}
                         />
                       </div>
