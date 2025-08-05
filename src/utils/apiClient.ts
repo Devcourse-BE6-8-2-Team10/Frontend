@@ -141,6 +141,18 @@ export const patentAPI = {
     const response = await apiClient.get(`/api/posts/${postId}/files`);
     return response.data.data || []; // 데이터 구조에 따라 .data를 추가
   },
+
+  // 내 특허 목록 조회
+  getMyPatents: async (): Promise<any[]> => {
+    const response = await apiClient.get("/api/posts/me");
+    return response.data;
+  },
+
+  // 찜한 특허 목록 조회
+  getLikedPatents: async (): Promise<any[]> => {
+    const response = await apiClient.get("/api/likes/me");
+    return response.data;
+  },
 };
 
 // 회원 관련 API 함수들
