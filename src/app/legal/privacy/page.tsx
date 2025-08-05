@@ -9,7 +9,7 @@ export default function PrivacyPage() {
             <section>
               <h2 className="text-xl font-semibold text-gray-800 mb-4">1. 개인정보의 처리 목적</h2>
               <p className="leading-relaxed mb-4">
-                특허바다(이하 "회사")는 다음의 목적을 위하여 개인정보를 처리하고 있으며, 
+                특허바다(이하 &quot;회사&quot;)는 다음의 목적을 위하여 개인정보를 처리하고 있으며, 
                 다음의 목적 이외의 용도로는 이용하지 않습니다.
               </p>
               <div className="space-y-3">
@@ -215,4 +215,4 @@ export default function PrivacyPage() {
       </div>
     </div>
   );
-} 
+}
