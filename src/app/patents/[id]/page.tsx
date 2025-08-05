@@ -91,7 +91,7 @@ const fetchFiles = async (postId: string) => {
 
 export default function PatentDetailPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const { ensureConnected } = useChat(); // 연결 보장 함수 추가
+  const { ensureConnected, refreshChatRooms } = useChat(); // refreshChatRooms 추가
   const router = useRouter();
   const params = useParams();
   const postId = params.id;
@@ -164,8 +164,22 @@ export default function PatentDetailPage() {
         const chatRoomId = response.data.data;
         console.log("채팅방 ID:", chatRoomId);
         
-        // 채팅 페이지로 이동하면서 roomId를 쿼리 파라미터로 전달
-        router.push(`/chat?roomId=${chatRoomId}`);
+        // 채팅방 생성 후 ChatContext의 채팅방 목록을 새로고침
+        try {
+          console.log("채팅방 목록 새로고침 시작");
+          await refreshChatRooms(); // ChatContext의 refreshChatRooms 함수 호출
+          console.log("채팅방 목록 새로고침 완료");
+          
+          // 짧은 지연 후 페이지 이동 (WebSocket 구독 완료 대기)
+          setTimeout(() => {
+            router.push(`/chat?roomId=${chatRoomId}`);
+          }, 300);
+          
+        } catch (refreshError) {
+          console.error('채팅방 목록 새로고침 실패:', refreshError);
+          // 새로고침 실패해도 페이지는 이동
+          router.push(`/chat?roomId=${chatRoomId}`);
+        }
       } else {
         alert('채팅방 생성에 실패했습니다.');
       }
@@ -178,7 +192,10 @@ export default function PatentDetailPage() {
           const rooms = roomsResponse.data.data;
           // 해당 게시글과 관련된 채팅방 찾기 (임시로 가장 최근 채팅방으로 이동)
           if (rooms && rooms.length > 0) {
-            router.push(`/chat?roomId=${rooms[0].id}`);
+            // 약간의 지연 후 이동
+            setTimeout(() => {
+              router.push(`/chat?roomId=${rooms[0].id}`);
+            }, 300);
           } else {
             alert('채팅방을 찾을 수 없습니다.');
           }
