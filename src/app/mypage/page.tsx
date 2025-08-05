@@ -1,12 +1,38 @@
 'use client';
 
-
 import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import apiClient from "@/utils/apiClient";
 import TradeHistory from "@/components/trade/TradeHistory";
 import TradeDetail from "@/components/trade/TradeDetail";
+import Image from "next/image"; // next/image에서 Image를 가져옵니다.
+
+// 내가 등록/찜한 특허 목록 타입
+interface PostListDTO {
+  id: number;
+  title: string;
+  description: string;
+  price: number;
+  status: string;
+  thumbnailImageUrl: string;
+  favoriteCount: number;
+  viewCount: number;
+  createdAt: string;
+  updatedAt: string;
+  memberId: number;
+  memberName: string;
+  memberProfileImageUrl: string;
+  isFavorite: boolean;
+}
+
+// 거래 내역 타입 정의
+interface Trade {
+  id: number;
+  status: string;
+  // API 응답에 따라 필요한 다른 속성들을 추가할 수 있습니다.
+  // 예: postTitle: string;
+}
 
 export default function MyPage() {
   const { user, isAuthenticated, loading, refreshUserInfo, userUpdateTimestamp, accessToken } = useAuth();
@@ -16,6 +42,85 @@ export default function MyPage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [selectedTradeId, setSelectedTradeId] = useState<number | null>(null);
 
+  const [myPatents, setMyPatents] = useState<PostListDTO[]>([]);
+  const [likedPatents, setLikedPatents] = useState<PostListDTO[]>([]);
+  const [myPatentsLoading, setMyPatentsLoading] = useState(true);
+  const [likedPatentsLoading, setLikedPatentsLoading] = useState(true);
+  const [myPatentsError, setMyPatentsError] = useState<string | null>(null);
+  const [likedPatentsError, setLikedPatentsError] = useState<string | null>(null);
+  const [completedTradesCount, setCompletedTradesCount] = useState(0);
+  const [completedTradesLoading, setCompletedTradesLoading] = useState(true);
+  const [completedTradesError, setCompletedTradesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCompletedTrades = async () => {
+      if (!isAuthenticated) return;
+      try {
+        setCompletedTradesLoading(true);
+        // 'any' 대신 명확한 Trade 타입 사용
+        const response = await apiClient.get<{ data: { content: Trade[] } }>('/api/trades', {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        const completed = response.data.data.content.filter((trade: Trade) => trade.status === 'COMPLETED');
+        setCompletedTradesCount(completed.length);
+      } catch (error) {
+        console.error('Failed to fetch completed trades:', error);
+        setCompletedTradesError('거래 완료 내역을 불러오는 데 실패했습니다.');
+      } finally {
+        setCompletedTradesLoading(false);
+      }
+    };
+
+    if (isAuthenticated) {
+      fetchCompletedTrades();
+    }
+  }, [isAuthenticated, accessToken]);
+
+  useEffect(() => {
+    const fetchMyPatents = async () => {
+      if (!isAuthenticated) return;
+      try {
+        setMyPatentsLoading(true);
+        const response = await apiClient.get<{data: PostListDTO[]}>('/api/posts/me', {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        setMyPatents(response.data.data);
+      } catch (error) {
+        console.error('Failed to fetch my patents:', error);
+        setMyPatentsError('내 특허를 불러오는 데 실패했습니다.');
+      } finally {
+        setMyPatentsLoading(false);
+      }
+    };
+
+    const fetchLikedPatents = async () => {
+      if (!isAuthenticated) return;
+      try {
+        setLikedPatentsLoading(true);
+        const response = await apiClient.get<{data: PostListDTO[]}>('/api/likes/me', {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        setLikedPatents(response.data.data);
+      } catch (error) {
+        console.error('Failed to fetch liked patents:', error);
+        setLikedPatentsError('찜한 특허를 불러오는 데 실패했습니다.');
+      } finally {
+        setLikedPatentsLoading(false);
+      }
+    };
+
+    if (isAuthenticated) {
+      fetchMyPatents();
+      fetchLikedPatents();
+    }
+  }, [isAuthenticated, accessToken]);
+
 
   // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
   useEffect(() => {
@@ -24,12 +129,12 @@ export default function MyPage() {
     }
   }, [isAuthenticated, loading, router]);
 
-  // 페이지 로드 시 한 번만 사용자 정보 새로고침
+  // 페이지 로드 시 사용자 정보 새로고침 (의존성 배열 수정)
   useEffect(() => {
     if (isAuthenticated && user) {
       refreshUserInfo();
     }
-  }, []);
+  }, [isAuthenticated, user, refreshUserInfo]);
 
   const handleImageChangeClick = () => {
     fileInputRef.current?.click();
@@ -91,13 +196,16 @@ export default function MyPage() {
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 mb-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-4">
-                {/* Profile Image Section */}
+                {/* Profile Image Section: <img>를 <Image>로 수정 */}
                 <div className="relative">
                   {user?.profileUrl ? (
-                    <img
+                    <Image
                       src={`${user.profileUrl.startsWith('http') ? user.profileUrl : `${process.env.NEXT_PUBLIC_BACKEND_URL}${user.profileUrl}`}?t=${userUpdateTimestamp}`}
                       alt="Profile"
+                      width={96}
+                      height={96}
                       className="w-24 h-24 rounded-full object-cover"
+                      priority
                     />
                   ) : (
                     <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-400 to-indigo-600 flex items-center justify-center">
@@ -142,15 +250,22 @@ export default function MyPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
               <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-2xl font-bold text-[#1a365d]">5</div>
+                <div className="text-2xl font-bold text-[#1a365d]">
+                  {myPatentsLoading ? '...' : myPatentsError ? '오류' : myPatents.length}
+                </div>
                 <div className="text-sm text-gray-600">내 특허</div>
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-2xl font-bold text-[#1a365d]">12</div>
+                <div className="text-2xl font-bold text-[#1a365d]">
+                  {likedPatentsLoading ? '...' : likedPatentsError ? '오류' : likedPatents.length}
+                </div>
+
                 <div className="text-sm text-gray-600">찜한 특허</div>
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-2xl font-bold text-[#1a365d]">3</div>
+                <div className="text-2xl font-bold text-[#1a365d]">
+                  {completedTradesLoading ? '...' : completedTradesError ? '오류' : completedTradesCount}
+                </div>
                 <div className="text-sm text-gray-600">거래 완료</div>
               </div>
             </div>
@@ -160,43 +275,45 @@ export default function MyPage() {
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 mb-6 shadow-xl">
             <h3 className="text-lg font-bold text-[#1a365d] mb-4">내 특허</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* My Patent Card 1 */}
-              <div className="border border-gray-200 rounded-xl p-4 bg-white/50">
-                <div className="bg-blue-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">
-                  <span className="text-blue-600 text-lg">🔋</span>
-                </div>
-                <h4 className="font-bold text-[#1a365d] mb-2 text-sm">차세대 배터리 기술 특허</h4>
-                <p className="text-gray-600 text-xs mb-3">고성능 리튬이온 배터리 기술</p>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-base text-[#1a365d]">₩25,000,000</span>
-                  <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">예약중</span>
-                </div>
-                <div className="flex gap-2">
-                  <button className="text-purple-600 hover:text-purple-700 text-sm">수정</button>
-                  <button className="text-red-600 hover:text-red-700 text-sm">삭제</button>
-                </div>
-              </div>
-
-              {/* My Patent Card 2 */}
-              <div className="border border-gray-200 rounded-xl p-4 bg-white/50">
-                <div className="bg-green-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">
-                  <span className="text-green-600 text-lg">🏥</span>
-                </div>
-                <h4 className="font-bold text-[#1a365d] mb-2 text-sm">원격 의료 진단 시스템</h4>
-                <p className="text-gray-600 text-xs mb-3">AI 기반 원격 의료 진단</p>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-base text-[#1a365d]">₩18,500,000</span>
-                  <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs">판매완료</span>
-                </div>
-                <div className="flex gap-2">
-                  <button className="text-purple-600 hover:text-purple-700 text-sm">수정</button>
-                  <button className="text-red-600 hover:text-red-700 text-sm">삭제</button>
-                </div>
-              </div>
-
+              {myPatentsLoading ? (
+                <p>내 특허를 불러오는 중...</p>
+              ) : myPatentsError ? (
+                <p className="text-red-600">{myPatentsError}</p>
+              ) : myPatents.length === 0 ? (
+                <p>등록된 특허가 없습니다.</p>
+              ) : (
+                myPatents.map((patent) => (
+                  <div key={patent.id} className="border border-gray-200 rounded-xl p-4 bg-white/50">
+                    <div className="bg-blue-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">
+                      <span className="text-blue-600 text-lg">🔋</span>
+                    </div>
+                    <h4 className="font-bold text-[#1a365d] mb-2 text-sm">{patent.title}</h4>
+                    <p className="text-gray-600 text-xs mb-3">{patent.description}</p>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-base text-[#1a365d]">₩{patent.price.toLocaleString()}</span>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        patent.status === 'RESERVED' ? 'bg-yellow-100 text-yellow-800' :
+                        patent.status === 'SOLD' ? 'bg-red-100 text-red-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {patent.status === 'RESERVED' ? '예약중' :
+                         patent.status === 'SOLD' ? '판매완료' :
+                         '판매중'}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="text-purple-600 hover:text-purple-700 text-sm">수정</button>
+                      <button className="text-red-600 hover:text-red-700 text-sm">삭제</button>
+                    </div>
+                  </div>
+                ))
+              )}
               {/* Add New Patent */}
               <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 flex items-center justify-center bg-white/30">
-                <button className="text-gray-500 hover:text-purple-600 transition-colors">
+                <button
+                  onClick={() => router.push('/patents/register')}
+                  className="text-gray-500 hover:text-purple-600 transition-colors"
+                >
                   <div className="text-2xl mb-2">+</div>
                   <div className="text-sm">새 특허 등록</div>
                 </button>
@@ -207,38 +324,39 @@ export default function MyPage() {
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 mb-6 shadow-xl">
             <h3 className="text-lg font-bold text-[#1a365d] mb-4">찜한 특허</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Liked Patent Card 1 */}
-              <div className="border border-gray-200 rounded-xl p-4 bg-white/50">
-                <div className="bg-pink-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">
-                  <span className="text-pink-600 text-lg">🔊</span>
-                </div>
-                <h4 className="font-bold text-[#1a365d] mb-2 text-sm">AI 기반 음성인식 알고리즘</h4>
-                <p className="text-gray-600 text-xs mb-3">혁신적인 음성인식 기술</p>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-base text-[#1a365d]">₩15,000,000</span>
-                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">판매중</span>
-                </div>
-                <div className="flex gap-2">
-                  <button className="text-purple-600 hover:text-purple-700 text-sm">구매문의</button>
-                  <button className="text-red-600 hover:text-red-700 text-sm">찜해제</button>
-                </div>
-              </div>
-              {/* Liked Patent Card 2 */}
-              <div className="border border-gray-200 rounded-xl p-4 bg-white/50">
-                <div className="bg-purple-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">
-                  <span className="text-purple-600 text-lg">🌱</span>
-                </div>
-                <h4 className="font-bold text-[#1a365d] mb-2 text-sm">친환경 플라스틱 대체 기술</h4>
-                <p className="text-gray-600 text-xs mb-3">생분해성 소재 기술</p>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-base text-[#1a365d]">₩12,000,000</span>
-                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">판매중</span>
-                </div>
-                <div className="flex gap-2">
-                  <button className="text-purple-600 hover:text-purple-700 text-sm">구매문의</button>
-                  <button className="text-red-600 hover:text-red-700 text-sm">찜해제</button>
-                </div>
-              </div>
+              {likedPatentsLoading ? (
+                <p>찜한 특허를 불러오는 중...</p>
+              ) : likedPatentsError ? (
+                <p className="text-red-600">{likedPatentsError}</p>
+              ) : likedPatents.length === 0 ? (
+                <p>찜한 특허가 없습니다.</p>
+              ) : (
+                likedPatents.map((patent) => (
+                  <div key={patent.id} className="border border-gray-200 rounded-xl p-4 bg-white/50">
+                    <div className="bg-pink-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">
+                      <span className="text-pink-600 text-lg">🔊</span>
+                    </div>
+                    <h4 className="font-bold text-[#1a365d] mb-2 text-sm">{patent.title}</h4>
+                    <p className="text-gray-600 text-xs mb-3">{patent.description}</p>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-base text-[#1a365d]">₩{patent.price.toLocaleString()}</span>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        patent.status === 'RESERVED' ? 'bg-yellow-100 text-yellow-800' :
+                        patent.status === 'SOLD' ? 'bg-red-100 text-red-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {patent.status === 'RESERVED' ? '예약중' :
+                         patent.status === 'SOLD' ? '판매완료' :
+                         '판매중'}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="text-purple-600 hover:text-purple-700 text-sm">구매문의</button>
+                      <button className="text-red-600 hover:text-red-700 text-sm">찜해제</button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
