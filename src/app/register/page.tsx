@@ -76,6 +76,7 @@ export default function RegisterPage() {
 
     try {
       await apiClient.post('/api/auth/signup', {
+      await apiClient.post('/api/auth/signup', {
         name: formData.name,
         email: formData.email,
         password: formData.password,
@@ -84,10 +85,10 @@ export default function RegisterPage() {
       // 회원가입 성공 시 회원가입 완료 페이지로 리다이렉트
       router.push("/register/success");
       
-    } catch (e: unknown) { // 'any' 대신 'unknown'을 사용하여 타입 안정성 확보
-      const error = e as ApiError; // 우리가 정의한 에러 타입으로 형변환
-      if (error.response?.data?.message) {
-        setError(error.response.data.message);
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      if (apiError.response?.data?.message) {
+        setError(apiError.response.data.message);
       } else {
         setError("서버 연결에 실패했습니다. 다시 시도해주세요.");
       }

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { memberAPI } from "@/utils/apiClient";
@@ -11,6 +12,14 @@ interface MemberUpdateRequest {
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
+}
+
+interface ApiError {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
 }
 
 export default function EditProfile() {
@@ -90,7 +99,11 @@ export default function EditProfile() {
       }
 
       // 비밀번호 변경이 있는 경우에만 currentPassword와 newPassword를 포함
-      const requestData: any = {
+      const requestData: {
+        name: string;
+        currentPassword?: string;
+        newPassword?: string;
+      } = {
         name: formData.name
       };
 
@@ -109,11 +122,12 @@ export default function EditProfile() {
       // 즉시 마이페이지로 이동
       router.push('/mypage');
       
-    } catch (error: any) {
-      console.error('정보 수정 실패:', error);
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      console.error('정보 수정 실패:', apiError);
       setMessage({ 
         type: 'error', 
-        text: error.response?.data?.message || '정보 수정에 실패했습니다.' 
+        text: apiError.response?.data?.message || '정보 수정에 실패했습니다.' 
       });
     } finally {
       setIsSubmitting(false);
@@ -249,11 +263,14 @@ export default function EditProfile() {
             {/* Profile Image Section */}
             <div className="flex flex-col items-center gap-4 mb-6">
               {user?.profileUrl ? (
-                <img
-                  src={`${user.profileUrl.startsWith('http') ? user.profileUrl : `${process.env.NEXT_PUBLIC_BACKEND_URL}${user.profileUrl}`}?t=${userUpdateTimestamp}`}
-                  alt="Profile"
-                  className="w-24 h-24 rounded-full object-cover"
-                />
+                <div className="relative w-24 h-24">
+                  <Image
+                    src={`${user.profileUrl.startsWith('http') ? user.profileUrl : `${process.env.NEXT_PUBLIC_BACKEND_URL}${user.profileUrl}`}?t=${userUpdateTimestamp}`}
+                    alt="Profile"
+                    fill
+                    className="rounded-full object-cover"
+                  />
+                </div>
               ) : (
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-400 to-indigo-600 flex items-center justify-center">
                   <span className="text-white text-4xl">
@@ -320,38 +337,38 @@ export default function EditProfile() {
                     />
                   </div>
 
-                                     <div>
-                     <label htmlFor="newPassword" className="block text-sm font-medium text-[#1a365d] mb-2">
-                       새 비밀번호
-                     </label>
-                     <input
-                       type="password"
-                       id="newPassword"
-                       name="newPassword"
-                       value={formData.newPassword}
-                       onChange={handleInputChange}
-                       className="w-full px-4 py-3 border text-black border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/80 backdrop-blur-sm"
-                       placeholder="새 비밀번호를 입력하세요"
-                     />
-                   </div>
+                  <div>
+                    <label htmlFor="newPassword" className="block text-sm font-medium text-[#1a365d] mb-2">
+                      새 비밀번호
+                    </label>
+                    <input
+                      type="password"
+                      id="newPassword"
+                      name="newPassword"
+                      value={formData.newPassword}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border text-black border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/80 backdrop-blur-sm"
+                      placeholder="새 비밀번호를 입력하세요"
+                    />
+                  </div>
 
-                   <div>
-                     <label htmlFor="confirmPassword" className="block text-sm font-medium text-[#1a365d] mb-2">
-                       새 비밀번호 확인
-                     </label>
-                     <input
-                       type="password"
-                       id="confirmPassword"
-                       name="confirmPassword"
-                       value={formData.confirmPassword}
-                       onChange={handleInputChange}
-                       className="w-full px-4 py-3 border text-black border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/80 backdrop-blur-sm"
-                       placeholder="새 비밀번호를 다시 입력하세요"
-                     />
-                     <p className="text-xs text-gray-500 mt-1">
-                       비밀번호를 변경하지 않으려면 비워두세요
-                     </p>
-                   </div>
+                  <div>
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-[#1a365d] mb-2">
+                      새 비밀번호 확인
+                    </label>
+                    <input
+                      type="password"
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border text-black border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/80 backdrop-blur-sm"
+                      placeholder="새 비밀번호를 다시 입력하세요"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      비밀번호를 변경하지 않으려면 비워두세요
+                    </p>
+                  </div>
                 </div>
               </div>
 

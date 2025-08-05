@@ -5,6 +5,18 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import apiClient, { memberAPI } from "@/utils/apiClient";
 
+interface ApiError {
+  message?: string;
+  response?: {
+    data?: {
+      message?: string;
+      resultCode?: string;
+    };
+    status?: number;
+  };
+  request?: unknown;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const { login, isAuthenticated, loading, user } = useAuth();
@@ -90,12 +102,13 @@ export default function LoginPage() {
       
       await Promise.race([verifyPromise, timeoutPromise]);
       setPasswordResetStep(2);
-    } catch (error: any) {
-      if (error.message === '요청 시간이 초과되었습니다.') {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      if (apiError.message === '요청 시간이 초과되었습니다.') {
         setPasswordResetError("서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해주세요.");
-      } else if (error.response?.data?.message) {
-        setPasswordResetError(error.response.data.message);
-      } else if (error.response?.status === 404) {
+      } else if (apiError.response?.data?.message) {
+        setPasswordResetError(apiError.response.data.message);
+      } else if (apiError.response?.status === 404) {
         setPasswordResetError("입력하신 이름과 이메일로 등록된 계정을 찾을 수 없습니다. 회원가입을 먼저 진행해주세요.");
       } else {
         setPasswordResetError("해당 정보와 일치하는 회원이 없습니다.");
@@ -128,12 +141,13 @@ export default function LoginPage() {
         confirmPassword: "",
       });
       
-    } catch (error: any) {
-      if (error.response?.data?.message) {
-        setPasswordResetError(error.response.data.message);
-      } else if (error.response?.status === 404) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      if (apiError.response?.data?.message) {
+        setPasswordResetError(apiError.response.data.message);
+      } else if (apiError.response?.status === 404) {
         setPasswordResetError("해당 정보와 일치하는 회원이 없습니다.");
-      } else if (error.response?.status === 400) {
+      } else if (apiError.response?.status === 400) {
         setPasswordResetError("입력 정보를 확인해주세요.");
       } else {
         setPasswordResetError("비밀번호 변경 중 오류가 발생했습니다. 다시 시도해주세요.");
@@ -193,15 +207,16 @@ export default function LoginPage() {
       } else {
         setError("로그인 응답 데이터가 올바르지 않습니다.");
       }
-    } catch (error: any) {
-      if (error.response?.data?.message) {
-        setError(error.response.data.message);
-      } else if (error.response?.status === 401) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      if (apiError.response?.data?.message) {
+        setError(apiError.response.data.message);
+      } else if (apiError.response?.status === 401) {
         setError("이메일 혹은 비밀번호를 잘못 입력하셨거나 등록되지 않은 계정입니다.");
-      } else if (error.response?.status === 400) {
+      } else if (apiError.response?.status === 400) {
         setError("이메일 혹은 비밀번호를 잘못 입력하셨거나 등록되지 않은 계정입니다.");
-      } else if (error.response?.status === 403) {
-        const resultCode = error.response?.data?.resultCode;
+      } else if (apiError.response?.status === 403) {
+        const resultCode = apiError.response?.data?.resultCode;
       
         if (resultCode === '403-1') {
           setError("탈퇴한 계정입니다. 새로운 계정으로 가입해주세요.");
@@ -210,9 +225,9 @@ export default function LoginPage() {
         } else {
           setError("접근 권한이 없습니다.");
         }
-      } else if (error.response?.status === 500) {
+      } else if (apiError.response?.status === 500) {
         setError("서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
-      } else if (error.request) {
+      } else if (apiError.request) {
         setError("서버 연결에 실패했습니다. 네트워크 연결을 확인해주세요.");
       } else {
         setError("로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
