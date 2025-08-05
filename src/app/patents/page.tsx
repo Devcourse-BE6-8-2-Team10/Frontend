@@ -184,7 +184,7 @@ export default function PatentsPage() {
               </button>
             </div>
             <div className="flex gap-2 flex-wrap">
-              {Object.entries(categoryNameMap).map(([eng, kor]) => (
+              {Object.values(categoryNameMap).map((kor) => (
                 <button
                   key={kor}
                   className={`px-3 py-1 rounded-full text-xs transition-colors ${

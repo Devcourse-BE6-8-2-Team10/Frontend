@@ -177,7 +177,7 @@ export default function PatentDetailPage() {
           setTimeout(() => {
             router.push(`/chat?roomId=${chatRoomId}`);
           }, 300);
-        } catch (refreshError) {
+        } catch {
           router.push(`/chat?roomId=${chatRoomId}`);
         }
       } else {

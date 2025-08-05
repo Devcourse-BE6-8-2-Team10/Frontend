@@ -88,7 +88,7 @@ export default function MyPage() {
             Authorization: `Bearer ${accessToken}`,
           },
         });
-        setMyPatents(response.data || []);
+        setMyPatents(response.data.data || []);
       } catch (error) {
         console.error('Failed to fetch my patents:', error);
         setMyPatentsError('내 특허를 불러오는 데 실패했습니다.');
@@ -106,7 +106,7 @@ export default function MyPage() {
             Authorization: `Bearer ${accessToken}`,
           },
         });
-        setLikedPatents(response.data || []);
+        setLikedPatents(response.data.data || []);
       } catch (error) {
         console.error('Failed to fetch liked patents:', error);
         setLikedPatentsError('찜한 특허를 불러오는 데 실패했습니다.');
@@ -367,9 +367,9 @@ export default function MyPage() {
 
       {/* Trade Detail Modal */}
       {selectedTradeId && (
-        <TradeDetail 
-          tradeId={selectedTradeId} 
-          onClose={() => setSelectedTradeId(null)} 
+        <TradeDetail
+          tradeId={selectedTradeId}
+          onClose={() => setSelectedTradeId(null)}
         />
       )}
     </div>

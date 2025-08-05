@@ -17,13 +17,14 @@ export function useAdminTable<T>(
   fetchData: () => Promise<T[]>,
   requiredRole: string = 'ADMIN'
 ) {
-  // fetchData를 useCallback으로 감싸서 안정적인 참조 제공
-  const stableFetchData = useCallback(fetchData, []);
   const { user, isAuthenticated, loading } = useAuth();
   const router = useRouter();
   const [data, setData] = useState<T[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // fetchData를 useCallback으로 감싸서 안정적인 참조 제공
+  const stableFetchData = useCallback(() => fetchData(), [fetchData]);
 
   // 공통 인증 로직
   useEffect(() => {
@@ -47,10 +48,10 @@ export function useAdminTable<T>(
     } catch (error: unknown) {
       const apiError = error as ApiError;
       console.error('데이터 조회 실패:', apiError);
-      
+
       // 구체적인 에러 메시지 제공
       let errorMessage = '데이터를 불러오는데 실패했습니다.';
-      
+
       if (apiError.response) {
         // 서버 응답 에러
         const status = apiError.response.status;
@@ -72,7 +73,7 @@ export function useAdminTable<T>(
         // 기타 에러
         errorMessage = `오류가 발생했습니다: ${apiError.message}`;
       }
-      
+
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -86,13 +87,13 @@ export function useAdminTable<T>(
     }
   }, [user?.role, requiredRole, isAuthenticated, loading, fetchDataHandler]);
 
-  return { 
-    user, 
-    isAuthenticated, 
-    loading, 
-    data, 
-    isLoading, 
-    error, 
-    refetch: fetchDataHandler 
+  return {
+    user,
+    isAuthenticated,
+    loading,
+    data,
+    isLoading,
+    error,
+    refetch: fetchDataHandler
   };
-} 
+}
