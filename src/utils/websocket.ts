@@ -32,7 +32,7 @@ class WebSocketService {
         console.log("WebSocket 연결 시도...");
 
         this.client = new Client({
-          webSocketFactory: () => new SockJS("https://www.devteam10:8080/chat"),
+          webSocketFactory: () => new SockJS("https://www.devteam10.org:8080/chat"),
           connectHeaders: {
             "user-email": userEmail
           },
