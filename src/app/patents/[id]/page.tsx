@@ -7,6 +7,7 @@ import { useChat } from '@/contexts/ChatContext';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link'; // next/link에서 Link를 가져옵니다.
 import Image from 'next/image'; // next/image에서 Image를 가져옵니다.
+import { tradeAPI } from '@/utils/apiClient';
 
 interface FileUploadResponse {
   id: number;
@@ -104,6 +105,7 @@ export default function PatentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [likeLoading, setLikeLoading] = useState(false);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+  const [isBuying, setIsBuying] = useState(false);
 
   useEffect(() => {
     if (!authLoading) {
@@ -266,6 +268,22 @@ export default function PatentDetailPage() {
     );
   }
 
+  const handleBuy = async () => {
+    if (!isAuthenticated) return router.push('/login');
+    if (!post) return;
+  
+    setIsBuying(true);
+    try {
+      await tradeAPI.createTrade(post.id);
+      alert('구매가 완료되었습니다.');
+      router.push('/mypage');
+    } catch (err: any) {
+      alert(err?.response?.data?.msg || '거래 생성에 실패했습니다.');
+    } finally {
+      setIsBuying(false);
+    }
+  };
+
   const categoryStyle =
     colorMap[post.category] || { bg: 'bg-gray-100', text: 'text-gray-600' };
 
@@ -405,6 +423,22 @@ export default function PatentDetailPage() {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
+              {post.status === '판매중' ? (
+                <button
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleBuy}
+                  disabled={isBuying}
+                >
+                  {isBuying ? '구매 요청 중...' : '구매하기'}
+                </button>
+              ) : (
+                <button
+                  className="bg-gray-400 text-white px-6 py-3 rounded-lg transition-colors flex-1 cursor-not-allowed"
+                  disabled
+                >
+                  판매 완료
+                </button>
+              )}
               <button 
                 className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handlePurchaseInquiry}
