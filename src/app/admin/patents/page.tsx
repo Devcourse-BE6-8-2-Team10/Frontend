@@ -84,12 +84,31 @@ export default function AdminPatentsPage() {
 
   // 정렬된 특허 목록
   const sortedPatents = [...filteredPatents].sort((a, b) => {
-    let aValue: any = a[sortBy as keyof Patent];
-    let bValue: any = b[sortBy as keyof Patent];
+    let aValue: string | number = '';
+    let bValue: string | number = '';
     
-    if (sortBy === 'createdAt') {
-      aValue = new Date(a.createdAt).getTime();
-      bValue = new Date(b.createdAt).getTime();
+    switch (sortBy) {
+      case 'createdAt':
+        aValue = new Date(a.createdAt).getTime();
+        bValue = new Date(b.createdAt).getTime();
+        break;
+      case 'price':
+        aValue = a.price;
+        bValue = b.price;
+        break;
+      case 'favoriteCnt':
+        aValue = a.favoriteCnt;
+        bValue = b.favoriteCnt;
+        break;
+      case 'title':
+        aValue = a.title.toLowerCase();
+        bValue = b.title.toLowerCase();
+        break;
+      default:
+        // fallback
+        aValue = a[sortBy as keyof Patent] as string;
+        bValue = b[sortBy as keyof Patent] as string;
+        break;
     }
     
     if (sortOrder === 'asc') {

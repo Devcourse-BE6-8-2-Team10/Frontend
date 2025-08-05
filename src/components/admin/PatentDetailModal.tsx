@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { adminAPI } from '@/utils/apiClient';
 
 interface Patent {
@@ -15,6 +15,14 @@ interface Patent {
   isLiked: boolean;
   createdAt: string;
   modifiedAt?: string;
+}
+
+interface ApiError {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
 }
 
 // 카테고리를 한글로 변환하는 함수
@@ -65,7 +73,7 @@ export default function PatentDetailModal({
   });
 
   // 특허 상세 정보 조회
-  const fetchPatentDetail = async () => {
+  const fetchPatentDetail = useCallback(async () => {
     if (!patentId) return;
     
     setIsLoading(true);
@@ -81,12 +89,13 @@ export default function PatentDetailModal({
         category: patentData.category || '',
         price: patentData.price || 0
       });
-    } catch (err: any) {
-      setError(err.response?.data?.message || '특허 정보를 불러오는데 실패했습니다.');
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      setError(error.response?.data?.message || '특허 정보를 불러오는데 실패했습니다.');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [patentId]);
 
   // 특허 정보 수정
   const handleUpdatePatent = async () => {
@@ -112,8 +121,9 @@ export default function PatentDetailModal({
       await fetchPatentDetail(); // 수정된 정보 다시 조회
       onPatentUpdated(); // 부모 컴포넌트에 업데이트 알림
       
-    } catch (err: any) {
-      setError(err.response?.data?.message || '특허 정보 수정에 실패했습니다.');
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      setError(error.response?.data?.message || '특허 정보 수정에 실패했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -137,8 +147,9 @@ export default function PatentDetailModal({
       setTimeout(() => {
         onClose();
       }, 1500);
-    } catch (err: any) {
-      setError(err.response?.data?.message || '특허 삭제에 실패했습니다.');
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      setError(error.response?.data?.message || '특허 삭제에 실패했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -148,7 +159,7 @@ export default function PatentDetailModal({
     if (isOpen && patentId) {
       fetchPatentDetail();
     }
-  }, [isOpen, patentId]);
+  }, [isOpen, patentId, fetchPatentDetail]);
 
   if (!isOpen) return null;
 
@@ -194,10 +205,10 @@ export default function PatentDetailModal({
                   <label className="block text-sm font-medium text-gray-700 mb-1">특허 ID</label>
                   <p className="text-gray-900">{patent.id}</p>
                 </div>
-                                                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">작성자</label>
-                    <p className="text-gray-900">{patent.authorName}</p>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">작성자</label>
+                  <p className="text-gray-900">{patent.authorName}</p>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">등록일</label>
                   <p className="text-gray-900">
@@ -256,19 +267,19 @@ export default function PatentDetailModal({
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
-                                         <select
-                       value={formData.category}
-                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                       className="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                     >
-                       <option value="PRODUCT">물건발명</option>
-                       <option value="METHOD">방법발명</option>
-                       <option value="USE">용도발명</option>
-                       <option value="DESIGN">디자인권</option>
-                       <option value="TRADEMARK">상표권</option>
-                       <option value="COPYRIGHT">저작권</option>
-                       <option value="ETC">기타</option>
-                     </select>
+                    <select
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      className="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="PRODUCT">물건발명</option>
+                      <option value="METHOD">방법발명</option>
+                      <option value="USE">용도발명</option>
+                      <option value="DESIGN">디자인권</option>
+                      <option value="TRADEMARK">상표권</option>
+                      <option value="COPYRIGHT">저작권</option>
+                      <option value="ETC">기타</option>
+                    </select>
                   </div>
                   
                   <div>
@@ -280,8 +291,6 @@ export default function PatentDetailModal({
                       className="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  
-
                   
                   <div className="flex gap-2 pt-4">
                     <button
@@ -306,28 +315,28 @@ export default function PatentDetailModal({
                       <label className="block text-sm font-medium text-gray-700 mb-1">제목</label>
                       <p className="text-gray-900 font-medium">{patent.title}</p>
                     </div>
-                                         <div>
-                       <label className="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
-                                              <span className={`px-2 py-1 rounded-full text-xs ${
-                          patent.category === 'PRODUCT' 
-                            ? 'bg-blue-100 text-blue-800' 
-                            : patent.category === 'METHOD'
-                            ? 'bg-green-100 text-green-800'
-                            : patent.category === 'USE'
-                            ? 'bg-purple-100 text-purple-800'
-                            : patent.category === 'DESIGN'
-                            ? 'bg-orange-100 text-orange-800'
-                            : patent.category === 'TRADEMARK'
-                            ? 'bg-red-100 text-red-800'
-                            : patent.category === 'COPYRIGHT'
-                            ? 'bg-indigo-100 text-indigo-800'
-                            : patent.category === 'ETC'
-                            ? 'bg-gray-100 text-gray-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {getCategoryLabel(patent.category)}
-                        </span>
-                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        patent.category === 'PRODUCT' 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : patent.category === 'METHOD'
+                          ? 'bg-green-100 text-green-800'
+                          : patent.category === 'USE'
+                          ? 'bg-purple-100 text-purple-800'
+                          : patent.category === 'DESIGN'
+                          ? 'bg-orange-100 text-orange-800'
+                          : patent.category === 'TRADEMARK'
+                          ? 'bg-red-100 text-red-800'
+                          : patent.category === 'COPYRIGHT'
+                          ? 'bg-indigo-100 text-indigo-800'
+                          : patent.category === 'ETC'
+                          ? 'bg-gray-100 text-gray-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {getCategoryLabel(patent.category)}
+                      </span>
+                    </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">가격</label>
                       <p className="text-gray-900">{patent.price.toLocaleString()}원</p>
