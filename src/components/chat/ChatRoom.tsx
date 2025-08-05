@@ -9,13 +9,9 @@ export default function ChatRoom() {
     rooms,
     currentRoom,
     isConnected,
-    isLoading,
     error,
-    connectToChat,
-    disconnectFromChat,
     selectRoom,
     sendMessage,
-    createTestRoom,
     getCurrentRoomMessages,
     deleteChatRoom,
     getUnreadCount
@@ -30,7 +26,7 @@ export default function ChatRoom() {
   // 채팅방 삭제 함수
   const handleDeleteRoom = async (roomId: number, e: React.MouseEvent) => {
     e.stopPropagation(); // 채팅방 선택 이벤트 방지
-    
+
     if (confirm('채팅방에서 나가시겠습니까? 채팅 기록이 모두 사라집니다.')) {
       try {
         await deleteChatRoom(roomId);
@@ -114,7 +110,7 @@ export default function ChatRoom() {
         <div className="flex-1 overflow-y-auto">
           {Array.isArray(rooms) && rooms.map((room) => {
             const unreadCount = getUnreadCount(room.id);
-            
+
             return (
               <div
                 key={room.id}
@@ -125,7 +121,7 @@ export default function ChatRoom() {
               >
                 <div className="flex items-center justify-between">
                   <h3 className="font-medium text-gray-800 flex-1">{room.name}</h3>
-                  
+
                   {/* 읽지 않은 메시지 개수 표시 */}
                   {unreadCount > 0 && (
                     <div className="flex items-center gap-2">
@@ -137,7 +133,7 @@ export default function ChatRoom() {
                       </span>
                     </div>
                   )}
-                  
+
                   {/* 삭제 버튼 - 인라인 스타일로 확실히 보이게 */}
                   <button
                     onClick={(e) => handleDeleteRoom(room.id, e)}
