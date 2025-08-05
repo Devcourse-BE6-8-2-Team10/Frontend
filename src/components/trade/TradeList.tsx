@@ -4,6 +4,20 @@ import React, { useState, useEffect } from "react";
 import { tradeAPI, TradeDto } from "@/utils/apiClient";
 import apiClient from "@/utils/apiClient";
 
+// 게시글 정보 타입 정의
+interface PostInfo {
+  id: number;
+  title: string;
+  description?: string;
+  price: number;
+  status?: string;
+}
+
+// 거래 상세 정보 타입 정의
+interface TradeDetailInfo {
+  post?: PostInfo;
+}
+
 interface TradeListProps {
   onTradeSelect: (trade: TradeDto) => void;
 }
@@ -11,7 +25,7 @@ interface TradeListProps {
 export default function TradeList({ onTradeSelect }: TradeListProps) {
   const [trades, setTrades] = useState<TradeDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const [tradeDetails, setTradeDetails] = useState<{[key: number]: {post?: any}}>({});
+  const [tradeDetails, setTradeDetails] = useState<{[key: number]: TradeDetailInfo}>({});
 
   useEffect(() => {
     fetchTrades();
@@ -22,15 +36,15 @@ export default function TradeList({ onTradeSelect }: TradeListProps) {
     try {
       const response = await tradeAPI.getMyTrades(0, 20);
       setTrades(response.content);
-      
+
       // 각 거래에 대한 게시글 정보만 가져오기
-      const details: {[key: number]: {post?: any}} = {};
-      
+      const details: {[key: number]: TradeDetailInfo} = {};
+
       for (const trade of response.content) {
         try {
           // 게시글 정보만 조회
           const postResponse = await apiClient.get(`/api/posts/${trade.postId}`);
-          
+
           details[trade.id] = {
             post: postResponse.data.data || postResponse.data
           };
@@ -38,7 +52,7 @@ export default function TradeList({ onTradeSelect }: TradeListProps) {
           console.error(`거래 ${trade.id} 상세 정보 조회 실패:`, error);
         }
       }
-      
+
       setTradeDetails(details);
     } catch (error) {
       console.error('거래 내역 조회 실패:', error);
@@ -61,14 +75,14 @@ export default function TradeList({ onTradeSelect }: TradeListProps) {
   return (
     <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
       <h3 className="text-lg font-bold text-[#1a365d] mb-4">거래 내역</h3>
-      
+
       {trades.length > 0 ? (
         <div className="space-y-4">
           {trades.map((trade) => {
             const detail = tradeDetails[trade.id];
             return (
-              <div 
-                key={trade.id} 
+              <div
+                key={trade.id}
                 className="border border-gray-200 rounded-xl p-4 bg-white/50 cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={() => onTradeSelect(trade)}
               >
@@ -110,4 +124,4 @@ export default function TradeList({ onTradeSelect }: TradeListProps) {
       )}
     </div>
   );
-} 
+}
