@@ -155,7 +155,7 @@ const TransactionList: React.FC<TransactionListProps> = ({ onTransactionSelect }
                       거래 #{transaction.id}
                     </h4>
                     <p className="text-gray-600 text-xs">
-                      {transaction.buyerId === user?.id ? '구매' : '판매'} • {formatDate(transaction.createdAt)}
+                      {transaction.buyerId === Number(user?.id) ? '구매' : '판매'} • {formatDate(transaction.createdAt)}
                     </p>
                     <p className="text-gray-500 text-xs">
                       게시글 ID: {transaction.postId}
