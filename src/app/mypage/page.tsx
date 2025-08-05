@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import apiClient from "@/utils/apiClient";
 import TradeHistory from "@/components/trade/TradeHistory";
 import TradeDetail from "@/components/trade/TradeDetail";
-import Image from "next/image"; // next/image에서 Image를 가져옵니다.
 
 // 내가 등록/찜한 특허 목록 타입
 interface PostListDTO {
@@ -121,7 +121,6 @@ export default function MyPage() {
     }
   }, [isAuthenticated, accessToken]);
 
-
   // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -129,12 +128,13 @@ export default function MyPage() {
     }
   }, [isAuthenticated, loading, router]);
 
-  // 페이지 로드 시 사용자 정보 새로고침 (의존성 배열 수정)
+  // 페이지 로드 시 한 번만 사용자 정보 새로고침 (무한루프 방지)
   useEffect(() => {
     if (isAuthenticated && user) {
-      refreshUserInfo();
+      // 이미 사용자 정보가 있으면 새로고침하지 않음
+      return;
     }
-  }, [isAuthenticated, user, refreshUserInfo]);
+  }, [isAuthenticated, user]);
 
   const handleImageChangeClick = () => {
     fileInputRef.current?.click();
@@ -199,14 +199,14 @@ export default function MyPage() {
                 {/* Profile Image Section: <img>를 <Image>로 수정 */}
                 <div className="relative">
                   {user?.profileUrl ? (
-                    <Image
-                      src={`${user.profileUrl.startsWith('http') ? user.profileUrl : `${process.env.NEXT_PUBLIC_BACKEND_URL}${user.profileUrl}`}?t=${userUpdateTimestamp}`}
-                      alt="Profile"
-                      width={96}
-                      height={96}
-                      className="w-24 h-24 rounded-full object-cover"
-                      priority
-                    />
+                    <div className="relative w-24 h-24">
+                      <Image
+                        src={`${user.profileUrl.startsWith('http') ? user.profileUrl : `${process.env.NEXT_PUBLIC_BACKEND_URL}${user.profileUrl}`}?t=${userUpdateTimestamp}`}
+                        alt="Profile"
+                        fill
+                        className="rounded-full object-cover"
+                      />
+                    </div>
                   ) : (
                     <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-400 to-indigo-600 flex items-center justify-center">
                       <span className="text-white text-4xl">

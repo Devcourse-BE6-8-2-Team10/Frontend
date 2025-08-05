@@ -11,7 +11,7 @@ export default function RegisterSuccessPage() {
     // 브라우저 히스토리에 현재 페이지를 추가하여 뒤로가기 방지
     window.history.pushState(null, '', window.location.href);
     
-    const handlePopState = (event: PopStateEvent) => {
+    const handlePopState = () => {
       // 뒤로가기 시도 시 홈페이지로 자동 이동
       router.push('/');
     };

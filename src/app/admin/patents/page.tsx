@@ -10,11 +10,14 @@ import PatentDetailModal from "@/components/admin/PatentDetailModal";
 interface Patent {
   id: number;
   title: string;
-  price: number;
+  description: string;
   category: string;
-  favoriteCnt: number;
+  price: number;
   createdAt: string;
-  imageUrl?: string;
+  modifiedAt?: string;
+  favoriteCnt: number;
+  authorId: number; 
+  authorName?: string; 
 }
 
 // 카테고리를 한글로 변환하는 함수
