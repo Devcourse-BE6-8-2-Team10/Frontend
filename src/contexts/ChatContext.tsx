@@ -56,6 +56,7 @@ interface ChatContextType extends ChatState {
   disconnectFromChat: () => void;
   selectRoom: (room: ChatRoom) => void;
   sendMessage: (content: string) => Promise<void>;
+  createRoom: (roomName: string, participants: string[]) => Promise<ChatRoom>; // 채팅방 생성 함수
   createTestRoom: () => void;
   ensureConnected: () => Promise<void>;
   getCurrentRoomMessages: () => ChatMessage[]; // 현재 방 메시지 가져오기
@@ -353,7 +354,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       console.log("=== 모든 채팅방 구독 시작 ===");
       uniqueRooms.forEach((room: ChatRoom) => {
         webSocketService.subscribeToChatRoom(room.id, (rawMessage: RawWebSocketMessage) => {
-          
+
           // 메시지 변환
           const message: ChatMessage = {
             id: rawMessage.id ? String(rawMessage.id) : String(Date.now() + Math.random()),
@@ -547,6 +548,32 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, [user, state.currentRoom, state.isConnected]);
 
+  // 채팅방 생성
+  const createRoom = useCallback(async (roomName: string, participants: string[]) => {
+    try {
+      console.log(`채팅방 생성 시작: ${roomName}`, participants);
+
+      // 서버에 채팅방 생성 요청
+      const newRoom = await chatAPI.createChatRoom({
+        name: roomName,
+        participants: participants,
+      });
+
+      console.log('새 채팅방 생성 완료:', newRoom);
+
+      // 채팅방 목록 새로고침
+      await refreshChatRooms();
+
+      // 새로 생성된 방 선택
+      selectRoom(newRoom);
+
+      return newRoom;
+    } catch (error) {
+      console.error('채팅방 생성 실패:', error);
+      throw error;
+    }
+  }, [refreshChatRooms, selectRoom]);
+
   // 테스트용 방 생성
   const createTestRoom = useCallback(() => {
     if (!user) return;
@@ -650,6 +677,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     disconnectFromChat,
     selectRoom,
     sendMessage,
+    createRoom, // 채팅방 생성 함수 추가
     createTestRoom,
     ensureConnected,
     getCurrentRoomMessages, // 새로운 함수 추가
