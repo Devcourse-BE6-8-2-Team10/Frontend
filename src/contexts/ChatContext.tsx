@@ -36,6 +36,7 @@ interface ChatContextType extends ChatState {
   deleteChatRoom: (roomId: number) => Promise<void>; // 채팅방 삭제
   markRoomAsRead: (roomId: number) => void; // 특정 방을 읽음 처리
   getUnreadCount: (roomId: number) => number; // 특정 방의 읽지 않은 메시지 수
+  refreshChatRooms: () => Promise<void>; // 채팅방 목록 새로고침
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -103,6 +104,104 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const getCurrentRoomMessages = useCallback(() => {
     return state.currentRoom ? state.messagesByRoom[state.currentRoom.id] || [] : [];
   }, [state.currentRoom, state.messagesByRoom]);
+
+  // 채팅방 목록 새로고침 함수 추가
+  const refreshChatRooms = useCallback(async () => {
+    if (!user || !isAuthenticated) {
+      console.log("채팅방 목록 새로고침 - 인증되지 않은 사용자");
+      return;
+    }
+
+    try {
+      console.log("채팅방 목록 새로고침 시작");
+      const token = getAccessTokenCookie();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch('http://localhost:8080/api/chat/rooms/my', {
+        method: 'GET',
+        headers,
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`채팅방 목록을 불러올 수 없습니다. (${response.status})`);
+      }
+
+      const responseData = await response.json();
+      const roomsData = responseData.data;
+      
+      // 배열 처리 로직 (기존 connectToChat과 동일)
+      let rooms = [];
+      if (Array.isArray(roomsData)) {
+        rooms = roomsData;
+      } else if (roomsData && Array.isArray(roomsData.data)) {
+        rooms = roomsData.data;
+      } else if (roomsData && roomsData.rooms && Array.isArray(roomsData.rooms)) {
+        rooms = roomsData.rooms;
+      }
+
+      // 중복 제거
+      const uniqueRooms = rooms.reduce((acc: any[], current: any) => {
+        const existing = acc.find(room => room.id === current.id);
+        if (!existing) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+
+      console.log("새로고침된 채팅방 목록:", uniqueRooms);
+
+      // 기존 구독 중인 채팅방 ID들
+      const existingRoomIds = state.rooms.map(room => room.id);
+
+      // 상태 업데이트
+      setState(prev => ({
+        ...prev,
+        rooms: uniqueRooms
+      }));
+
+      // 새로운 채팅방들을 WebSocket에 구독
+      uniqueRooms.forEach((room: any) => {
+        // 기존에 구독하지 않은 새로운 방만 구독
+        if (!existingRoomIds.includes(room.id)) {
+          console.log(`새 채팅방 ${room.id} WebSocket 구독 시작`);
+          webSocketService.subscribeToChatRoom(room.id, (message) => {
+            const messageRoomId = message.roomId || message.chatRoomId || room.id;
+            setState(prevState => {
+              const shouldIncrementUnread = prevState.currentRoom?.id !== messageRoomId;
+              
+              if (shouldIncrementUnread) {
+                console.log(`방 ${messageRoomId} 읽지 않은 메시지 수: ${(prevState.unreadCounts[messageRoomId] || 0)} → ${(prevState.unreadCounts[messageRoomId] || 0) + 1}`);
+              }
+              
+              return {
+                ...prevState,
+                messagesByRoom: {
+                  ...prevState.messagesByRoom,
+                  [messageRoomId]: [...(prevState.messagesByRoom[messageRoomId] || []), message]
+                },
+                unreadCounts: shouldIncrementUnread ? {
+                  ...prevState.unreadCounts,
+                  [messageRoomId]: (prevState.unreadCounts[messageRoomId] || 0) + 1
+                } : prevState.unreadCounts
+              };
+            });
+          });
+        }
+      });
+
+      console.log("채팅방 목록 새로고침 완료");
+    } catch (error) {
+      console.error("채팅방 목록 새로고침 실패:", error);
+      throw error;
+    }
+  }, [user, isAuthenticated, state.rooms]);
 
   // WebSocket 연결
   const connectToChat = useCallback(async () => {
@@ -453,6 +552,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     deleteChatRoom, // 채팅방 삭제 함수 추가
     markRoomAsRead, // 읽음 처리 함수 추가
     getUnreadCount, // 읽지 않은 메시지 수 조회 함수 추가
+    refreshChatRooms, // 채팅방 목록 새로고침 함수 추가
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
