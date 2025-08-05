@@ -1,16 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
-import { tradeAPI, postAPI, userAPI, Trade, PostDetail, UserInfo } from "@/utils/apiClient";
+import { tradeAPI, TradeDto } from "@/utils/apiClient";
+import apiClient from "@/utils/apiClient";
 
 interface TradeListProps {
-  onTradeSelect: (trade: Trade) => void;
+  onTradeSelect: (trade: TradeDto) => void;
 }
 
 export default function TradeList({ onTradeSelect }: TradeListProps) {
-  const [trades, setTrades] = useState<Trade[]>([]);
+  const [trades, setTrades] = useState<TradeDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const [tradeDetails, setTradeDetails] = useState<{[key: number]: {post: PostDetail, seller: UserInfo, buyer: UserInfo}}>({});
+  const [tradeDetails, setTradeDetails] = useState<{[key: number]: {post?: any}}>({});
 
   useEffect(() => {
     fetchTrades();
@@ -20,23 +21,18 @@ export default function TradeList({ onTradeSelect }: TradeListProps) {
     setLoading(true);
     try {
       const response = await tradeAPI.getMyTrades(0, 20);
-      setTrades(response.data.content);
+      setTrades(response.content);
       
-      // 각 거래에 대한 상세 정보 가져오기
-      const details: {[key: number]: {post: PostDetail, seller: UserInfo, buyer: UserInfo}} = {};
+      // 각 거래에 대한 게시글 정보만 가져오기
+      const details: {[key: number]: {post?: any}} = {};
       
-      for (const trade of response.data.content) {
+      for (const trade of response.content) {
         try {
-          const [postResponse, sellerResponse, buyerResponse] = await Promise.all([
-            postAPI.getPostDetail(trade.postId),
-            userAPI.getUserInfo(trade.sellerId),
-            userAPI.getUserInfo(trade.buyerId)
-          ]);
+          // 게시글 정보만 조회
+          const postResponse = await apiClient.get(`/api/posts/${trade.postId}`);
           
           details[trade.id] = {
-            post: postResponse.data,
-            seller: sellerResponse.data,
-            buyer: buyerResponse.data
+            post: postResponse.data.data || postResponse.data
           };
         } catch (error) {
           console.error(`거래 ${trade.id} 상세 정보 조회 실패:`, error);
@@ -82,7 +78,7 @@ export default function TradeList({ onTradeSelect }: TradeListProps) {
                       {detail?.post?.title || `게시글 ${trade.postId}`}
                     </h4>
                     <p className="text-gray-600 text-xs">
-                      판매자: {detail?.seller?.name || `사용자 ${trade.sellerId}`}
+                      거래 ID: {trade.id}
                     </p>
                   </div>
                   <span className={`px-2 py-1 rounded-full text-xs ${
