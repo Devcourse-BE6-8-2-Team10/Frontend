@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import apiClient from "@/utils/apiClient";
 
+interface ApiError {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const { isAuthenticated, loading } = useAuth();
@@ -65,7 +73,7 @@ export default function RegisterPage() {
     }
 
     try {
-      const response = await apiClient.post('/api/auth/signup', {
+      await apiClient.post('/api/auth/signup', {
         name: formData.name,
         email: formData.email,
         password: formData.password,
@@ -74,9 +82,10 @@ export default function RegisterPage() {
       // 회원가입 성공 시 회원가입 완료 페이지로 리다이렉트
       router.push("/register/success");
       
-    } catch (error: any) {
-      if (error.response?.data?.message) {
-        setError(error.response.data.message);
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      if (apiError.response?.data?.message) {
+        setError(apiError.response.data.message);
       } else {
         setError("서버 연결에 실패했습니다. 다시 시도해주세요.");
       }

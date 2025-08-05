@@ -1,7 +1,7 @@
 'use client';
 
-
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import apiClient from "@/utils/apiClient";
@@ -16,7 +16,6 @@ export default function MyPage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [selectedTradeId, setSelectedTradeId] = useState<number | null>(null);
 
-
   // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -24,12 +23,13 @@ export default function MyPage() {
     }
   }, [isAuthenticated, loading, router]);
 
-  // 페이지 로드 시 한 번만 사용자 정보 새로고침
+  // 페이지 로드 시 한 번만 사용자 정보 새로고침 (무한루프 방지)
   useEffect(() => {
     if (isAuthenticated && user) {
-      refreshUserInfo();
+      // 이미 사용자 정보가 있으면 새로고침하지 않음
+      return;
     }
-  }, []);
+  }, [isAuthenticated, user]);
 
   const handleImageChangeClick = () => {
     fileInputRef.current?.click();
@@ -94,11 +94,14 @@ export default function MyPage() {
                 {/* Profile Image Section */}
                 <div className="relative">
                   {user?.profileUrl ? (
-                    <img
-                      src={`${user.profileUrl.startsWith('http') ? user.profileUrl : `${process.env.NEXT_PUBLIC_BACKEND_URL}${user.profileUrl}`}?t=${userUpdateTimestamp}`}
-                      alt="Profile"
-                      className="w-24 h-24 rounded-full object-cover"
-                    />
+                    <div className="relative w-24 h-24">
+                      <Image
+                        src={`${user.profileUrl.startsWith('http') ? user.profileUrl : `${process.env.NEXT_PUBLIC_BACKEND_URL}${user.profileUrl}`}?t=${userUpdateTimestamp}`}
+                        alt="Profile"
+                        fill
+                        className="rounded-full object-cover"
+                      />
+                    </div>
                   ) : (
                     <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-400 to-indigo-600 flex items-center justify-center">
                       <span className="text-white text-4xl">
