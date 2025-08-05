@@ -445,8 +445,8 @@ export default function PatentDetailPage() {
             {/* Debug: Post Status */}
             <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-sm text-yellow-800">
-                <strong>Debug Info:</strong> Post Status = "{post.status}" | 
-                Show Buy Button = {(post.status === 'SALE').toString()} |
+                <strong>Debug Info:</strong> Post Status = &quot;{post.status}&quot; | 
+                Show Buy Button = {(post.status === 'SALE' || post.status === 'AVAILABLE').toString()} |
                 Owner = {post.ownerName} | Current User = {user?.name}
               </p>
             </div>
