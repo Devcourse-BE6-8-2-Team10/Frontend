@@ -75,14 +75,14 @@ export function useAdminTable<T>(
     } finally {
       setIsLoading(false);
     }
-  }, [fetchData]);
+  }, []); // fetchData 의존성 제거
 
   // 공통 데이터 페칭 로직
   useEffect(() => {
-    if (user?.role === requiredRole) {
+    if (user?.role === requiredRole && isAuthenticated && !loading) {
       fetchDataHandler();
     }
-  }, [user, requiredRole, fetchDataHandler]);
+  }, [user?.role, requiredRole, isAuthenticated, loading]); // fetchDataHandler 의존성 제거
 
   return { 
     user, 

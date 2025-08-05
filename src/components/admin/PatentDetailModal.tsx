@@ -5,16 +5,15 @@ import { adminAPI } from '@/utils/apiClient';
 
 interface Patent {
   id: number;
-  authorName: string;
   title: string;
   description: string;
   category: string;
   price: number;
-  status: string;
-  favoriteCnt: number;
-  isLiked: boolean;
   createdAt: string;
   modifiedAt?: string;
+  favoriteCnt: number; // 좋아요 수 추가
+  authorId: number; // 작성자 ID 추가
+  authorName?: string; // 작성자 정보 추가
 }
 
 interface ApiError {
@@ -205,10 +204,12 @@ export default function PatentDetailModal({
                   <label className="block text-sm font-medium text-gray-700 mb-1">특허 ID</label>
                   <p className="text-gray-900">{patent.id}</p>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">작성자</label>
-                  <p className="text-gray-900">{patent.authorName}</p>
-                </div>
+                {patent.authorName && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">작성자</label>
+                    <p className="text-gray-900">{patent.authorName}</p>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">등록일</label>
                   <p className="text-gray-900">
@@ -340,6 +341,10 @@ export default function PatentDetailModal({
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">가격</label>
                       <p className="text-gray-900">{patent.price.toLocaleString()}원</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">좋아요 수</label>
+                      <p className="text-gray-900">{patent.favoriteCnt}</p>
                     </div>
 
                   </div>
