@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function Footer() {
   return (
     <footer className="bg-[#2D3748] px-6 py-8 mt-10">
@@ -16,52 +18,49 @@ export default function Footer() {
             <h4 className="text-white font-semibold mb-4">서비스</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <a
+                <Link
                   href="/patents/search"
                   className="text-gray-300 hover:text-white transition-colors"
                 >
                   특허 검색
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/patents/register"
                   className="text-gray-300 hover:text-white transition-colors"
                 >
                   특허 등록
-                </a>
+                </Link>
               </li>
-              
-              
             </ul>
           </div>
           <div>
             <h4 className="text-white font-semibold mb-4">고객지원</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <a
+                <Link
                   href="/legal/faq"
                   className="text-gray-300 hover:text-white transition-colors"
                 >
                   자주 묻는 질문
-                </a>
+                </Link>
               </li>
-              
               <li>
-                <a
+                <Link
                   href="/legal/terms"
                   className="text-gray-300 hover:text-white transition-colors"
                 >
                   이용약관
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/legal/privacy"
                   className="text-gray-300 hover:text-white transition-colors"
                 >
                   개인정보처리방침
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
