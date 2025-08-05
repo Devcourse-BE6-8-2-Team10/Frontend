@@ -5,8 +5,8 @@ const nextConfig: NextConfig = {
     unoptimized: true,
     remotePatterns: [
       {
-        protocol: 'http',
-        hostname: '34.64.160.179',
+        protocol: 'https',
+        hostname: 'www.devteam10',
         port: '8080',
         pathname: '/files/**',
       },
@@ -19,8 +19,8 @@ const nextConfig: NextConfig = {
     ],
   },
   env: {
-    NEXT_PUBLIC_BACKEND_URL: "http://34.64.160.179:8080",
-    NEXT_PUBLIC_WEBSOCKET_URL: "ws://34.64.160.179:8080/chat",
+    NEXT_PUBLIC_BACKEND_URL: "https://www.devteam10:8080",
+    NEXT_PUBLIC_WEBSOCKET_URL: "wss://www.devteam10:8080/chat",
     // 백엔드 주소
     // NEXT_PUBLIC_BACKEND_URL: "http://34.64.160.179:8080",
     // NEXT_PUBLIC_WEBSOCKET_URL: "ws://34.64.160.179:8080/chat",
