@@ -114,7 +114,7 @@ export const patentAPI = {
     createdAt: string;
   }>> => {
     const response = await apiClient.get("/api/posts");
-    return response.data;
+    return response.data.data || response.data;
   },
 
   // 인기 특허 목록 조회
@@ -128,7 +128,7 @@ export const patentAPI = {
     createdAt: string;
   }>> => {
     const response = await apiClient.get("/api/posts/popular");
-    return response.data;
+    return response.data.data || response.data;
   },
 
   // 특정 게시글의 파일 목록 조회
