@@ -41,6 +41,7 @@ interface PostDetail {
   abstract: string;
   files: FileUploadResponse[];
   // API 응답에서 올 수 있는 다른 작성자 필드들
+  writerName?: string;
   memberName?: string;
   authorName?: string;
   userName?: string;
@@ -137,6 +138,7 @@ export default function PatentDetailPage() {
   const getAuthorName = (post: PostDetail): string => {
     console.log('Getting author name from post:', post);
     console.log('Available fields:', {
+      writerName: post.writerName,
       ownerName: post.ownerName,
       memberName: post.memberName,
       authorName: post.authorName,
@@ -144,7 +146,8 @@ export default function PatentDetailPage() {
       member: post.member
     });
     
-    const authorName = post.ownerName || 
+    const authorName = post.writerName ||
+           post.ownerName || 
            post.memberName || 
            post.authorName || 
            post.userName || 
