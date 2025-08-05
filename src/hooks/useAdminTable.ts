@@ -36,13 +36,6 @@ export function useAdminTable<T>(
     }
   }, [isAuthenticated, loading, user, router, requiredRole]);
 
-  // 공통 데이터 페칭 로직
-  useEffect(() => {
-    if (user?.role === requiredRole) {
-      fetchDataHandler();
-    }
-  }, [user, requiredRole]);
-
   const fetchDataHandler = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -83,6 +76,13 @@ export function useAdminTable<T>(
       setIsLoading(false);
     }
   }, [fetchData]);
+
+  // 공통 데이터 페칭 로직
+  useEffect(() => {
+    if (user?.role === requiredRole) {
+      fetchDataHandler();
+    }
+  }, [user, requiredRole, fetchDataHandler]);
 
   return { 
     user, 
