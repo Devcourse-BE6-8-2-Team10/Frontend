@@ -5,6 +5,7 @@ import apiClient from '@/utils/apiClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChat } from '@/contexts/ChatContext';
 import { useParams, useRouter } from 'next/navigation';
+import { tradeAPI } from '@/utils/apiClient';
 
 interface FileUploadResponse {
   id: number;
@@ -274,8 +275,8 @@ export default function PatentDetailPage() {
   
     setIsBuying(true);
     try {
-      await apiClient.post("/api/trades", { postId: post.id });
-      alert('구매가가 완료되었습니다.');
+      await tradeAPI.createTrade(post.id);
+      alert('구매가 완료되었습니다.');
       router.push('/mypage');
     } catch (err: any) {
       alert(err?.response?.data?.msg || '거래 생성에 실패했습니다.');
