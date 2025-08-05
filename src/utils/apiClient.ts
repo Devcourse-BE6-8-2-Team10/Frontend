@@ -222,7 +222,7 @@ export const adminAPI = {
 
   // 전체 특허 목록 조회 (관리자 전용)
   getAllPatents: async (): Promise<any> => {
-    const response = await apiClient.get('/api/posts');
+    const response = await apiClient.get('/api/admin/patents');
     return response.data;
   },
 
@@ -230,9 +230,16 @@ export const adminAPI = {
   updatePatentByAdmin: async (patentId: number, data: {
     title?: string;
     description?: string;
-    status?: string;
+    category?: string;
+    price?: number;
   }): Promise<void> => {
     await apiClient.patch(`/api/admin/patents/${patentId}`, data);
+  },
+
+  // 특허 상세 정보 조회 (관리자 전용)
+  getPatentDetail: async (patentId: number): Promise<any> => {
+    const response = await apiClient.get(`/api/admin/patents/${patentId}`);
+    return response.data;
   },
 
   // 특허 삭제 (관리자 전용)
