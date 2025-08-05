@@ -6,6 +6,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useChat } from '@/contexts/ChatContext';
 import { useParams, useRouter } from 'next/navigation';
 
+const statusMap: { [key: string]: string } = {
+  SALE: '판매중',
+  SOLD_OUT: '판매완료'
+};
+
 interface FileUploadResponse {
   id: number;
   fileUrl: string;
@@ -91,6 +96,7 @@ const fetchFiles = async (postId: string) => {
 
 export default function PatentDetailPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const { ensureConnected } = useChat(); // 연결 보장 함수 추가
   const router = useRouter();
   const params = useParams();
@@ -135,6 +141,18 @@ export default function PatentDetailPage() {
       }
     }
   }, [authLoading, isAuthenticated, router, postId]);
+
+ const handleDelete = async () => {
+    if (!confirm('정말 삭제하시겠습니까?')) return;
+    try {
+      await apiClient.delete(`/api/posts/${post?.id}`);
+      alert('게시글이 삭제되었습니다.');
+      router.push('/patents');
+    } catch (error) {
+      console.error('삭제 실패:', error);
+      alert('게시글 삭제에 실패했습니다.');
+    }
+  };
 
   // 구매 문의 기능
   const handlePurchaseInquiry = async () => {
@@ -205,7 +223,7 @@ export default function PatentDetailPage() {
     setLikeLoading(true);
 
     try {
-      const endpoint = `/api/posts/${post.id}/favorite`;
+      const endpoint = `/api/likes/${post.id}`;
       const response =
         post.isLiked ?
         await apiClient.delete(endpoint) :
@@ -339,7 +357,7 @@ export default function PatentDetailPage() {
                         'bg-red-100 text-red-800'
                     } px-3 py-1 rounded-full`}
                   >
-                    {post.status}
+                    {statusMap[post.status] || post.status}
                   </span>
                   <span className="text-gray-500">
                     찜: {post.favoriteCnt}
@@ -403,6 +421,22 @@ export default function PatentDetailPage() {
                 공유하기
               </button>
             </div>
+            {user?.name === post.ownerName && (
+              <div className="flex gap-4 mt-6">
+                <button
+                  className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600"
+                  onClick={() => router.push(`/patents/${post.id}/edit`)}
+                >
+                  수정하기
+                </button>
+                <button
+                  className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600"
+                  onClick={handleDelete}
+                >
+                  삭제하기
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </section>

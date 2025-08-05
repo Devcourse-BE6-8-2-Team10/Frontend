@@ -101,6 +101,7 @@ export default function PatentRegisterPage() {
       }
 
       setIsSubmitted(true);
+      router.push('/patents');
     } catch (error) {
       console.error('특허 등록 실패:', error);
       alert('특허 등록에 실패했습니다.');

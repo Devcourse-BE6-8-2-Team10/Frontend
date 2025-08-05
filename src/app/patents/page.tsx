@@ -43,7 +43,8 @@ export default function PatentsPage() {
         const response = await apiClient.get<Post[]>('/api/posts');
         const postsWithFullImageUrl = response.data.map(post => ({
           ...post,
-          imageUrl: getFullImageUrl(post.imageUrl)
+          imageUrl: getFullImageUrl(post.imageUrl),
+          isLiked: post.isLiked ?? false
         }));
         setPosts(postsWithFullImageUrl);
       } catch (error: any) {
