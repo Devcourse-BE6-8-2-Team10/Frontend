@@ -22,7 +22,7 @@ const Header = () => {
 
   const handleChatClick = async (e: React.MouseEvent) => {
     e.preventDefault();
-    
+
     if (!isAuthenticated) {
       router.push('/login');
       return;
@@ -30,10 +30,10 @@ const Header = () => {
 
     try {
       console.log("헤더 채팅 버튼 클릭 - WebSocket 연결 확인");
-      
+
       // WebSocket 연결 확인 및 자동 연결
       await ensureConnected();
-      
+
       // 채팅방 목록 새로고침 (최신 채팅방 목록을 가져옴)
       try {
         console.log("헤더 - 채팅방 목록 새로고침 시작");
@@ -43,12 +43,12 @@ const Header = () => {
         console.error('헤더 - 채팅방 목록 새로고침 실패:', refreshError);
         // 새로고침 실패해도 계속 진행
       }
-      
+
       // 짧은 지연 후 채팅 페이지로 이동
       setTimeout(() => {
         router.push('/chat');
-      }, 200);
-      
+      }, 300);
+
     } catch (error) {
       console.error('채팅 연결 실패:', error);
       // 연결 실패해도 채팅 페이지로 이동 (페이지에서 재시도 가능)
@@ -111,8 +111,8 @@ const Header = () => {
                 마이페이지
               </Link>
               {user?.role === 'ADMIN' && (
-                <Link 
-                  href="/admin/members" 
+                <Link
+                  href="/admin/members"
                   className="hover:text-indigo-500 transition-colors"
                 >
                   관리페이지
