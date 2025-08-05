@@ -9,7 +9,7 @@ export default function TermsPage() {
             <section>
               <h2 className="text-xl font-semibold text-gray-800 mb-4">제1조 (목적)</h2>
               <p className="leading-relaxed">
-                본 약관은 특허바다(이하 "회사")가 제공하는 특허 거래 플랫폼 서비스의 이용과 관련하여
+                본 약관은 특허바다(이하 &quot;회사&quot;)가 제공하는 특허 거래 플랫폼 서비스의 이용과 관련하여
                 회사와 이용자 간의 권리, 의무 및 책임사항, 기타 필요한 사항을 규정함을 목적으로 합니다.
               </p>
             </section>
@@ -18,18 +18,19 @@ export default function TermsPage() {
               <h2 className="text-xl font-semibold text-gray-800 mb-4">제2조 (정의)</h2>
               <div className="space-y-3">
                 <p className="leading-relaxed">
-                  <strong>1. "서비스"</strong>라 함은 회사가 제공하는 특허 검색, 등록, 거래 중개, 법률 자문 등의 모든 서비스를 의미합니다.
+                  <strong>1. &quot;서비스&quot;</strong>라 함은 회사가 제공하는 특허 검색, 등록, 거래 중개, 법률 자문 등의 모든 서비스를 의미합니다.
                 </p>
                 <p className="leading-relaxed">
-                  <strong>2. "이용자"</strong>라 함은 회사의 서비스에 접속하여 본 약관에 따라 회사와 이용계약을 체결하고
+                  <strong>2. &quot;이용자&quot;</strong>라 함은 회사의 서비스에 접속하여 본 약관에 따라 회사와 이용계약을 체결하고
                   회사가 제공하는 서비스를 이용하는 회원 및 비회원을 말합니다.
                 </p>
                 <p className="leading-relaxed">
-                  <strong>3. "회원"</strong>이라 함은 회사의 서비스에 접속하여 본 약관에 동의하고 회사와 이용계약을 체결한 자를 말합니다.
+                  <strong>3. &quot;회원&quot;</strong>이라 함은 회사의 서비스에 접속하여 본 약관에 동의하고 회사와 이용계약을 체결한 자를 말합니다.
                 </p>
               </div>
             </section>
 
+            {/* 나머지 코드는 동일합니다. */}
             <section>
               <h2 className="text-xl font-semibold text-gray-800 mb-4">제3조 (약관의 효력 및 변경)</h2>
               <div className="space-y-3">
@@ -197,4 +198,4 @@ export default function TermsPage() {
       </div>
     </div>
   );
-} 
+}
