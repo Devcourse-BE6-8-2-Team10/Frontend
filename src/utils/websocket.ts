@@ -3,12 +3,13 @@ import { Client, StompSubscription } from "@stomp/stompjs";
 
 export interface ChatMessage {
   id?: string;
-  senderId: string;
+  senderId: string | number; // 백엔드에서 number로 오고, 프론트에서 비교할 때 타입 혼동 방지
   senderName: string;
   content: string;
   timestamp: string;
   roomId: number;
   senderEmail : string;
+  messageType?: string; // 메시지 타입 추가 (일반, 나가기 알림 등)
 }
 
 export interface ChatRoom {
