@@ -14,6 +14,31 @@ import { useAuth } from "./AuthContext";
 import { getAccessTokenCookie } from "../utils/cookieUtils";
 import { chatAPI } from "../utils/apiClient";
 
+// 백엔드에서 받는 메시지 타입 정의
+interface BackendMessage {
+  id?: string | number;
+  senderId: string | number;
+  senderName: string;
+  content: string;
+  timestamp?: string;
+  createdAt?: string;
+  senderEmail?: string;
+  messageType?: string;
+}
+
+// WebSocket에서 받는 원본 메시지 타입 정의
+interface RawWebSocketMessage {
+  id?: string | number;
+  senderId: string | number;
+  senderName: string;
+  content: string;
+  timestamp?: string;
+  roomId?: number;
+  chatRoomId?: number;
+  senderEmail?: string;
+  messageType?: string;
+}
+
 // 상태 구조 변경 - 방별 메시지 저장
 interface ChatState {
   rooms: ChatRoom[];
@@ -83,7 +108,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       console.log(`첫 번째 메시지 샘플:`, messages[0]);
 
       // 메시지 데이터 변환 - 백엔드에서 오는 형식을 프론트엔드 형식으로 변환
-      const transformedMessages = messages.map((msg: any) => ({
+      const transformedMessages = messages.map((msg: BackendMessage) => ({
         id: msg.id || String(Date.now() + Math.random()),
         senderId: String(msg.senderId), // 문자열로 변환
         senderName: msg.senderName,
@@ -165,7 +190,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       }
 
       // 중복 제거
-      const uniqueRooms = rooms.reduce((acc: any[], current: any) => {
+      const uniqueRooms = rooms.reduce((acc: ChatRoom[], current: ChatRoom) => {
         const existing = acc.find(room => room.id === current.id);
         if (!existing) {
           acc.push(current);
@@ -185,7 +210,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       }));
 
       // 새로운 채팅방들을 WebSocket에 구독
-      uniqueRooms.forEach((room: any) => {
+      uniqueRooms.forEach((room: ChatRoom) => {
         // 기존에 구독하지 않은 새로운 방만 구독
         if (!existingRoomIds.includes(room.id)) {
           console.log(`새 채팅방 ${room.id} WebSocket 구독 시작`);
@@ -306,7 +331,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       }
 
       // 중복 채팅방 제거 (같은 ID를 가진 방이 여러 개 있을 경우)
-      const uniqueRooms = rooms.reduce((acc: any[], current: any) => {
+      const uniqueRooms = rooms.reduce((acc: ChatRoom[], current: ChatRoom) => {
         const existing = acc.find(room => room.id === current.id);
         if (!existing) {
           acc.push(current);
@@ -326,12 +351,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       }));
 
       console.log("=== 모든 채팅방 구독 시작 ===");
-      uniqueRooms.forEach((room: any) => {
-        webSocketService.subscribeToChatRoom(room.id, (rawMessage) => {
+      uniqueRooms.forEach((room: ChatRoom) => {
+        webSocketService.subscribeToChatRoom(room.id, (rawMessage: RawWebSocketMessage) => {
           
           // 메시지 변환
           const message: ChatMessage = {
-            id: rawMessage.id || String(Date.now() + Math.random()),
+            id: rawMessage.id ? String(rawMessage.id) : String(Date.now() + Math.random()),
             senderId: String(rawMessage.senderId), // 문자열로 변환
             senderName: rawMessage.senderName,
             content: rawMessage.content,

@@ -8,6 +8,7 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   roomId: number;
+  chatRoomId?: number; // WebSocket에서 사용하는 추가 속성
   senderEmail : string;
   messageType?: string; // 메시지 타입 추가 (일반, 나가기 알림 등)
 }
