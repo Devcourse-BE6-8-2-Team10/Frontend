@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect } from "react";
 import apiClient from "@/utils/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,9 +32,9 @@ export default function PatentsPage() {
   const [recentPosts, setRecentPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("전체 카테고리");
   const [activeTag, setActiveTag] = useState<string | null>(null);
-
 
   useEffect(() => {
     const fetchData = async () => {
@@ -73,14 +71,13 @@ export default function PatentsPage() {
 
   const handleCategoryClick = (category: string) => {
     if (activeTag === category) {
-      setActiveTag(null); // 이미 선택된 해시태그 클릭 시 해제
+      setActiveTag(null);
       setSelectedCategory("전체 카테고리");
     } else {
       setActiveTag(category);
       setSelectedCategory(category);
     }
- };
-
+  };
 
   const toggleLike = async (postId: number) => {
     if (!isAuthenticated) {
@@ -108,8 +105,12 @@ export default function PatentsPage() {
     }
   };
 
+  const handleSearch = () => {
+    setSearchKeyword(searchTerm);
+  };
+
   const filteredRecentPosts = recentPosts.filter(post => {
-    const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = post.title.toLowerCase().includes(searchKeyword.toLowerCase());
     const matchesCategory = selectedCategory === "전체 카테고리" || post.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -155,35 +156,34 @@ export default function PatentsPage() {
               </select>
               <button
                 className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors text-sm"
-                onClick={() => console.log('검색 버튼 클릭')}
+                onClick={handleSearch}
               >
                 검색
               </button>
             </div>
-               <div className="flex gap-2 flex-wrap">
-                 {categories.filter(c => c !== "전체 카테고리").map(category => (
-                    <button
-                      key={category}
-                      className={`px-3 py-1 rounded-full text-xs transition-colors ${
-                        activeTag === category
-                         ? 'bg-purple-600 text-white'
-                         : 'bg-blue-100 text-[#1a365d] hover:bg-blue-200'
-                      }`}
-                      onClick={() => handleCategoryClick(category)}
-                    >
-                      #{category}
-                    </button>
-                 ))}
-
-                 {activeTag && (
-                   <button
-                     className="ml-2 text-sm text-red-500 hover:underline"
-                     onClick={() => handleCategoryClick(activeTag)}
-                   >
-                    필터 해제 ✕
-                   </button>
-                 )}
-               </div>
+            <div className="flex gap-2 flex-wrap">
+              {categories.filter(c => c !== "전체 카테고리").map(category => (
+                <button
+                  key={category}
+                  className={`px-3 py-1 rounded-full text-xs transition-colors ${
+                    activeTag === category
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-blue-100 text-[#1a365d] hover:bg-blue-200'
+                  }`}
+                  onClick={() => handleCategoryClick(category)}
+                >
+                  #{category}
+                </button>
+              ))}
+              {activeTag && (
+                <button
+                  className="ml-2 text-sm text-red-500 hover:underline"
+                  onClick={() => handleCategoryClick(activeTag)}
+                >
+                  필터 해제 ✕
+                </button>
+              )}
+            </div>
           </div>
 
           {/* 인기 게시글 */}
