@@ -81,18 +81,31 @@ const colorMap: { [key: string]: { bg: string; text: string } } = {
 };
 
 const fetchPostDetail = async (postId: string) => {
-  const response = await apiClient.get(`/api/posts/${postId}`);
-  const filesResponse = await apiClient.get(`/api/posts/${postId}/files`);
-  const postData = response.data.data || response.data;
-  const filesData = filesResponse.data.data || [];
+  console.log('Fetching post detail for ID:', postId);
   
-  console.log('Post detail response:', postData); // 디버깅용 로그
-  
-  return {
-    ...postData,
-    abstract: postData.description,
-    files: filesData,
-  };
+  try {
+    const response = await apiClient.get(`/api/posts/${postId}`);
+    console.log('Post detail raw response:', response);
+    console.log('Post detail response data:', response.data);
+    
+    const filesResponse = await apiClient.get(`/api/posts/${postId}/files`);
+    console.log('Files response:', filesResponse.data);
+    
+    const postData = response.data.data || response.data;
+    const filesData = filesResponse.data.data || [];
+    
+    console.log('Processed post data:', postData);
+    console.log('Available fields in post data:', Object.keys(postData));
+    
+    return {
+      ...postData,
+      abstract: postData.description,
+      files: filesData,
+    };
+  } catch (error) {
+    console.error('Error fetching post detail:', error);
+    throw error;
+  }
 };
 
 const fetchFiles = async (postId: string): Promise<FileUploadResponse[]> => {
@@ -120,12 +133,24 @@ export default function PatentDetailPage() {
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   // 작성자 이름을 가져오는 함수
   const getAuthorName = (post: PostDetail): string => {
-    return post.ownerName || 
+    console.log('Getting author name from post:', post);
+    console.log('Available fields:', {
+      ownerName: post.ownerName,
+      memberName: post.memberName,
+      authorName: post.authorName,
+      userName: post.userName,
+      member: post.member
+    });
+    
+    const authorName = post.ownerName || 
            post.memberName || 
            post.authorName || 
            post.userName || 
            post.member?.name || 
            '정보 없음';
+           
+    console.log('Final author name:', authorName);
+    return authorName;
   };
 
   useEffect(() => {
@@ -137,6 +162,7 @@ export default function PatentDetailPage() {
           setLoading(true);
           try {
             const postData = await fetchPostDetail(postId);
+            console.log('Setting post data:', postData);
             setPost(postData);
 
             const filesData = await fetchFiles(postId);
