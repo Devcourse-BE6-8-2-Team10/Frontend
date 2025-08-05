@@ -13,6 +13,7 @@ interface Patent {
   description: string;
   category: string;
   price: number;
+  status: string;
   createdAt: string;
   modifiedAt?: string;
   favoriteCnt: number;
@@ -39,6 +40,20 @@ const getCategoryLabel = (category: string): string => {
       return '기타';
     default:
       return category;
+  }
+};
+
+// 상태를 한글로 변환하는 함수
+const getStatusLabel = (status: string): string => {
+  switch (status) {
+    case 'SALE':
+      return '판매중';
+    case 'SOLD_OUT':
+      return '판매완료';
+    case 'SUSPENDED':
+      return '판매중단';
+    default:
+      return status;
   }
 };
 
@@ -262,6 +277,7 @@ export default function AdminPatentsPage() {
                           )}
                         </div>
                       </th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700">상태</th>
                       <th 
                         className="text-left py-3 px-4 font-medium text-gray-700 cursor-pointer hover:bg-gray-50"
                         onClick={() => {
@@ -332,6 +348,19 @@ export default function AdminPatentsPage() {
                            </span>
                          </td>
                         <td className="py-3 px-4 text-gray-900">{patent.price.toLocaleString()}원</td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            patent.status === 'SALE' 
+                              ? 'bg-green-100 text-green-800' 
+                              : patent.status === 'SOLD_OUT'
+                              ? 'bg-red-100 text-red-800'
+                              : patent.status === 'SUSPENDED'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {getStatusLabel(patent.status)}
+                          </span>
+                        </td>
                         <td className="py-3 px-4 text-gray-900">{patent.favoriteCnt}</td>
                         <td className="py-3 px-4 text-gray-500">
                           {new Date(patent.createdAt).toLocaleDateString()}

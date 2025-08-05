@@ -332,6 +332,7 @@ export const adminAPI = {
     description: string;
     category: string;
     price: number;
+    status: string;
     createdAt: string;
     modifiedAt?: string;
     favoriteCnt: number;
@@ -348,6 +349,7 @@ export const adminAPI = {
     description?: string;
     category?: string;
     price?: number;
+    status?: string;
   }): Promise<void> => {
     await apiClient.patch(`/api/admin/patents/${patentId}`, data);
   },
@@ -359,6 +361,7 @@ export const adminAPI = {
     description: string;
     category: string;
     price: number;
+    status: string;
     createdAt: string;
     modifiedAt?: string;
     favoriteCnt: number;
