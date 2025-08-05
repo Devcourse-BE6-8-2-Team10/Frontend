@@ -9,6 +9,7 @@ interface Patent {
   description: string;
   category: string;
   price: number;
+  status: string;
   createdAt: string;
   modifiedAt?: string;
   favoriteCnt: number; // 좋아요 수 추가
@@ -46,6 +47,20 @@ const getCategoryLabel = (category: string): string => {
   }
 };
 
+// 상태를 한글로 변환하는 함수
+const getStatusLabel = (status: string): string => {
+  switch (status) {
+    case 'SALE':
+      return '판매중';
+    case 'SOLD_OUT':
+      return '판매완료';
+    case 'SUSPENDED':
+      return '판매중단';
+    default:
+      return status;
+  }
+};
+
 interface PatentDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -68,7 +83,8 @@ export default function PatentDetailModal({
     title: '',
     description: '',
     category: '',
-    price: 0
+    price: 0,
+    status: 'SALE' // 상태 초기값 설정
   });
 
   // 특허 상세 정보 조회
@@ -86,7 +102,8 @@ export default function PatentDetailModal({
         title: patentData.title || '',
         description: patentData.description || '',
         category: patentData.category || '',
-        price: patentData.price || 0
+        price: patentData.price || 0,
+        status: patentData.status || 'SALE' // 상태 데이터 포함
       });
     } catch (err: unknown) {
       const error = err as ApiError;
@@ -108,7 +125,8 @@ export default function PatentDetailModal({
       title: formData.title,
       description: formData.description,
       category: formData.category,
-      price: formData.price
+      price: formData.price,
+      status: formData.status // 상태 포함
     };
     
     console.log('백엔드로 전송되는 데이터:', updateData);
@@ -127,6 +145,8 @@ export default function PatentDetailModal({
       setIsLoading(false);
     }
   };
+
+
 
   // 특허 삭제
   const handleDeletePatent = async () => {
@@ -210,32 +230,36 @@ export default function PatentDetailModal({
                     <p className="text-gray-900">{patent.authorName}</p>
                   </div>
                 )}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">등록일</label>
-                  <p className="text-gray-900">
-                    {new Date(patent.createdAt).toLocaleDateString('ko-KR', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                </div>
-                {patent.modifiedAt && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">수정일</label>
-                    <p className="text-gray-900">
-                      {new Date(patent.modifiedAt).toLocaleDateString('ko-KR', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
-                  </div>
-                )}
+                                 <div>
+                   <label className="block text-sm font-medium text-gray-700 mb-1">등록일</label>
+                   <p className="text-gray-900">
+                     {new Date(patent.createdAt).toLocaleDateString('ko-KR', {
+                       year: 'numeric',
+                       month: 'long',
+                       day: 'numeric',
+                       hour: '2-digit',
+                       minute: '2-digit'
+                     })}
+                   </p>
+                 </div>
+                 {patent.modifiedAt && (
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">수정일</label>
+                     <p className="text-gray-900">
+                       {new Date(patent.modifiedAt).toLocaleDateString('ko-KR', {
+                         year: 'numeric',
+                         month: 'long',
+                         day: 'numeric',
+                         hour: '2-digit',
+                         minute: '2-digit'
+                       })}
+                     </p>
+                   </div>
+                 )}
+                 <div>
+                   <label className="block text-sm font-medium text-gray-700 mb-1">좋아요 수</label>
+                   <p className="text-gray-900">{patent.favoriteCnt}</p>
+                 </div>
                 
               </div>
             </div>
@@ -292,6 +316,19 @@ export default function PatentDetailModal({
                       className="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
+
+                                     <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">상태</label>
+                     <select
+                       value={formData.status}
+                       onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                       className="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                     >
+                       <option value="SALE">판매중</option>
+                       <option value="SOLD_OUT">판매완료</option>
+                       <option value="SUSPENDED">판매중단</option>
+                     </select>
+                   </div>
                   
                   <div className="flex gap-2 pt-4">
                     <button
@@ -338,14 +375,24 @@ export default function PatentDetailModal({
                         {getCategoryLabel(patent.category)}
                       </span>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">가격</label>
-                      <p className="text-gray-900">{patent.price.toLocaleString()}원</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">좋아요 수</label>
-                      <p className="text-gray-900">{patent.favoriteCnt}</p>
-                    </div>
+                                         <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-1">가격</label>
+                       <p className="text-gray-900">{patent.price.toLocaleString()}원</p>
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-1">상태</label>
+                       <span className={`px-2 py-1 rounded-full text-xs ${
+                         patent.status === 'SALE'
+                           ? 'bg-green-100 text-green-800'
+                           : patent.status === 'SOLD_OUT'
+                           ? 'bg-red-100 text-red-800'
+                           : patent.status === 'SUSPENDED'
+                           ? 'bg-yellow-100 text-yellow-800'
+                           : 'bg-gray-100 text-gray-800'
+                       }`}>
+                         {getStatusLabel(patent.status)}
+                       </span>
+                     </div>
 
                   </div>
                   
@@ -354,25 +401,27 @@ export default function PatentDetailModal({
                     <p className="text-gray-900 whitespace-pre-wrap">{patent.description}</p>
                   </div>
                   
-                  <div className="flex gap-2 pt-4">
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="px-4 py-2 bg-blue-600 cursor-pointer text-white rounded-md hover:bg-blue-700"
-                    >
-                      수정
-                    </button>
+                  <div className="flex justify-between items-center pt-4">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        className="px-4 py-2 bg-blue-600 cursor-pointer text-white rounded-md hover:bg-blue-700"
+                      >
+                        수정
+                      </button>
+                      <button
+                        onClick={onClose}
+                        className="px-4 py-2 bg-gray-300 cursor-pointer text-gray-700 rounded-md hover:bg-gray-400"
+                      >
+                        닫기
+                      </button>
+                    </div>
                     <button
                       onClick={handleDeletePatent}
                       disabled={isLoading}
                       className="px-4 py-2 bg-red-600 cursor-pointer text-white rounded-md hover:bg-red-700 disabled:opacity-50"
                     >
                       {isLoading ? '삭제 중...' : '삭제'}
-                    </button>
-                    <button
-                      onClick={onClose}
-                      className="px-4 py-2 bg-gray-300 cursor-pointer text-gray-700 rounded-md hover:bg-gray-400"
-                    >
-                      닫기
                     </button>
                   </div>
                 </div>

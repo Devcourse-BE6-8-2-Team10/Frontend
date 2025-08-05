@@ -112,6 +112,33 @@ export default function MemberDetailModal({
     }
   };
 
+  // 회원 탈퇴 처리
+  const handleDeleteMember = async () => {
+    if (!memberId) return;
+    
+    if (!confirm('정말로 이 회원을 탈퇴시키시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+      return;
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    setSuccessMessage(null);
+    
+    try {
+      await adminAPI.deleteMemberByAdmin(memberId);
+      setSuccessMessage('회원이 성공적으로 탈퇴되었습니다.');
+      onMemberUpdated();
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      setError(error.response?.data?.message || '회원 탈퇴에 실패했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (isOpen && memberId) {
       fetchMemberDetail();
@@ -248,9 +275,17 @@ export default function MemberDetailModal({
               </div>
             </div>
 
-            {/* 수정 가능한 정보 섹션 */}
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold mb-4 text-gray-700">수정 가능한 정보</h3>
+                         {/* 수정 가능한 정보 섹션 */}
+             <div className="bg-blue-50 p-4 rounded-lg">
+               <h3 className="text-lg font-semibold mb-4 text-gray-700">수정 가능한 정보</h3>
+               
+               {member.status === 'DELETED' && (
+                 <div className="mb-4 p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+                   <p className="text-sm">
+                     <strong>탈퇴된 회원입니다.</strong> 탈퇴된 회원의 정보는 수정할 수 없습니다.
+                   </p>
+                 </div>
+               )}
               
               {isEditing ? (
                 <div className="space-y-4">
@@ -295,32 +330,52 @@ export default function MemberDetailModal({
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">상태</label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="ACTIVE">활성</option>
-                      <option value="BLOCKED">차단</option>
-                      <option value="DELETED">삭제</option>
-                    </select>
+                    <div className="space-y-2">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="status"
+                          value="ACTIVE"
+                          checked={formData.status === 'ACTIVE'}
+                          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                          className="mr-2 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700">사용중</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="status"
+                          value="BLOCKED"
+                          checked={formData.status === 'BLOCKED'}
+                          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                          className="mr-2 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700">차단</span>
+                      </label>
+                    </div>
                   </div>
                   
-                  <div className="flex gap-2 pt-4">
-                    <button
-                      onClick={handleUpdateMember}
-                      disabled={isLoading}
-                      className="px-4 py-2 cursor-pointer bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                    >
-                      {isLoading ? '저장 중...' : '저장'}
-                    </button>
-                    <button
-                      onClick={() => setIsEditing(false)}
-                      className="px-4 py-2 cursor-pointer bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
-                    >
-                      취소
-                    </button>
-                  </div>
+                                     <div className="flex gap-2 pt-4">
+                     <button
+                       onClick={handleUpdateMember}
+                       disabled={isLoading || member.status === 'DELETED'}
+                       className={`px-4 py-2 rounded-md ${
+                         member.status === 'DELETED'
+                           ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                           : 'bg-blue-600 text-white cursor-pointer hover:bg-blue-700'
+                       } disabled:opacity-50`}
+                     >
+                       {isLoading ? '저장 중...' : 
+                        member.status === 'DELETED' ? '저장 불가' : '저장'}
+                     </button>
+                     <button
+                       onClick={() => setIsEditing(false)}
+                       className="px-4 py-2 cursor-pointer bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                     >
+                       취소
+                     </button>
+                   </div>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -334,15 +389,15 @@ export default function MemberDetailModal({
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         member.status === 'ACTIVE' 
                           ? 'bg-green-100 text-green-800' 
-                          : member.status === 'DELETED'
-                          ? 'bg-red-100 text-red-800'
                           : member.status === 'BLOCKED'
                           ? 'bg-yellow-100 text-yellow-800'
+                          : member.status === 'DELETED'
+                          ? 'bg-red-100 text-red-800'
                           : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {member.status === 'ACTIVE' ? '활성중' :
+                        {member.status === 'ACTIVE' ? '사용중' :
                          member.status === 'BLOCKED' ? '차단됨' :
-                         member.status === 'DELETED' ? '삭제됨' : member.status}
+                         member.status === 'DELETED' ? '탈퇴됨' : member.status}
                       </span>
                     </div>
                     <div>
@@ -353,20 +408,39 @@ export default function MemberDetailModal({
                     </div>
                   </div>
                   
-                  <div className="flex gap-2 pt-4">
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="px-4 py-2 bg-blue-600 cursor-pointer text-white rounded-md hover:bg-blue-700"
-                    >
-                      수정
-                    </button>
-                    <button
-                      onClick={onClose}
-                      className="px-4 py-2 bg-gray-300 cursor-pointer text-gray-700 rounded-md hover:bg-gray-400"
-                    >
-                      닫기
-                    </button>
-                  </div>
+                                     <div className="flex justify-between items-center pt-4">
+                     <div className="flex gap-2">
+                       <button
+                         onClick={() => setIsEditing(true)}
+                         disabled={member.status === 'DELETED' || isLoading}
+                         className={`px-4 py-2 rounded-md ${
+                           member.status === 'DELETED'
+                             ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                             : 'bg-blue-600 text-white cursor-pointer hover:bg-blue-700'
+                         } disabled:opacity-50`}
+                       >
+                         {member.status === 'DELETED' ? '수정 불가' : '수정'}
+                       </button>
+                       <button
+                         onClick={onClose}
+                         className="px-4 py-2 bg-gray-300 cursor-pointer text-gray-700 rounded-md hover:bg-gray-400"
+                       >
+                         닫기
+                       </button>
+                     </div>
+                     <button
+                       onClick={handleDeleteMember}
+                       disabled={isLoading || member.status === 'DELETED'}
+                       className={`px-4 py-2 rounded-md ${
+                         member.status === 'DELETED'
+                           ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                           : 'bg-red-600 text-white cursor-pointer hover:bg-red-700'
+                       } disabled:opacity-50`}
+                     >
+                       {isLoading ? '탈퇴 중...' : 
+                        member.status === 'DELETED' ? '이미 탈퇴됨' : '회원탈퇴'}
+                     </button>
+                   </div>
                 </div>
               )}
             </div>

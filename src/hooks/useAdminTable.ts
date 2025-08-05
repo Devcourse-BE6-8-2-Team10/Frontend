@@ -17,6 +17,8 @@ export function useAdminTable<T>(
   fetchData: () => Promise<T[]>,
   requiredRole: string = 'ADMIN'
 ) {
+  // fetchData를 useCallback으로 감싸서 안정적인 참조 제공
+  const stableFetchData = useCallback(fetchData, []);
   const { user, isAuthenticated, loading } = useAuth();
   const router = useRouter();
   const [data, setData] = useState<T[]>([]);
@@ -40,7 +42,7 @@ export function useAdminTable<T>(
     try {
       setIsLoading(true);
       setError("");
-      const result = await fetchData();
+      const result = await stableFetchData();
       setData(result);
     } catch (error: unknown) {
       const apiError = error as ApiError;
@@ -75,14 +77,14 @@ export function useAdminTable<T>(
     } finally {
       setIsLoading(false);
     }
-  }, []); // fetchData 의존성 제거
+  }, [stableFetchData]);
 
   // 공통 데이터 페칭 로직
   useEffect(() => {
     if (user?.role === requiredRole && isAuthenticated && !loading) {
       fetchDataHandler();
     }
-  }, [user?.role, requiredRole, isAuthenticated, loading]); // fetchDataHandler 의존성 제거
+  }, [user?.role, requiredRole, isAuthenticated, loading, fetchDataHandler]);
 
   return { 
     user, 
