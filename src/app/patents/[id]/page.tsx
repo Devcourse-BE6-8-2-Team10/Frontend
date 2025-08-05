@@ -23,7 +23,6 @@ interface FileUploadResponse {
   sortOrder: number;
 }
 
-// Post 상세 정보 타입 정의 (실제 API 응답 기준)
 interface PostDetail {
   id: number;
   title: string;
@@ -35,12 +34,11 @@ interface PostDetail {
   isLiked: boolean;
   createdAt: string;
   modifiedAt: string;
-  ownerName: string; // 작성자 이름 필드
+  ownerName: string;
   abstract: string;
   files: FileUploadResponse[];
 }
 
-// 카테고리 영문 key를 한글로 변환하기 위한 맵
 const categoryNameMap: { [key: string]: string } = {
   PRODUCT: '물건발명',
   METHOD: '방법발명',
@@ -51,7 +49,6 @@ const categoryNameMap: { [key: string]: string } = {
   ETC: '기타',
 };
 
-// 카테고리에 따른 이모지, 배경색, 텍스트색 매핑
 const emojiMap: { [key: string]: string } = {
   PRODUCT: '📦',
   METHOD: '⚙️',
@@ -72,14 +69,11 @@ const colorMap: { [key: string]: { bg: string; text: string } } = {
   ETC: { bg: 'bg-yellow-100', text: 'text-yellow-600' },
 };
 
-// API 호출 함수
 const fetchPostDetail = async (postId: string) => {
   const response = await apiClient.get(`/api/posts/${postId}`);
   const filesResponse = await apiClient.get(`/api/posts/${postId}/files`);
-
   const postData = response.data.data || response.data;
   const filesData = filesResponse.data.data || [];
-
   return {
     ...postData,
     abstract: postData.description,
@@ -173,39 +167,36 @@ export default function PatentDetailPage() {
     setIsCreatingRoom(true);
 
     try {
-      console.log("구매 문의 - WebSocket 연결 확인");
       await ensureConnected();
-
       const response = await apiClient.post(`/api/chat/rooms/${post.id}`);
 
       if (response.data.resultCode === "200") {
         const chatRoomId = response.data.data;
-        console.log("채팅방 ID:", chatRoomId);
-
         try {
-          console.log("채팅방 목록 새로고침 시작");
           await refreshChatRooms();
-          console.log("채팅방 목록 새로고침 완료");
-
           setTimeout(() => {
             router.push(`/chat?roomId=${chatRoomId}`);
           }, 300);
-
         } catch (refreshError) {
-          console.error('채팅방 목록 새로고침 실패:', refreshError);
           router.push(`/chat?roomId=${chatRoomId}`);
         }
       } else {
         alert('채팅방 생성에 실패했습니다.');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('채팅방 생성 실패:', error);
-      if (error.response?.data?.msg?.includes('이미 존재')) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        typeof (error as { response?: { data?: { msg?: string } } }).response?.data?.msg === 'string' &&
+        (error as { response?: { data?: { msg?: string } } }).response!.data!.msg!.includes('이미 존재')
+      ) {
         try {
           const roomsResponse = await apiClient.get('/api/chat/rooms/my');
           const rooms = roomsResponse.data.data;
           if (rooms && rooms.length > 0) {
-            const existingRoom = rooms.find((room: any) => room.postId === post.id);
+            const existingRoom = rooms.find((room: { postId: number }) => room.postId === post.id);
             if (existingRoom) {
               setTimeout(() => {
                 router.push(`/chat?roomId=${existingRoom.id}`);
@@ -293,8 +284,17 @@ export default function PatentDetailPage() {
       await tradeAPI.createTrade(post.id);
       alert('구매가 완료되었습니다.');
       router.push('/mypage');
-    } catch (err: any) {
-      alert(err?.response?.data?.msg || '거래 생성에 실패했습니다.');
+    } catch (err: unknown) {
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'response' in err &&
+        typeof (err as { response?: { data?: { msg?: string } } }).response?.data?.msg === 'string'
+      ) {
+        alert((err as { response: { data: { msg: string } } }).response.data.msg);
+      } else {
+        alert('거래 생성에 실패했습니다.');
+      }
     } finally {
       setIsBuying(false);
     }
