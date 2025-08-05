@@ -51,16 +51,11 @@ export default function ChatRoom() {
   // 메시지 전송
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("=== 메시지 전송 시도 ===");
-    console.log("messageInput:", messageInput);
-    console.log("isConnected:", isConnected);
-    console.log("currentRoom:", currentRoom);
-    console.log("user:", user);
 
     if (messageInput.trim()) {
       console.log("sendMessage 호출 중...");
       const inputElement = e.currentTarget.querySelector('input[type="text"]') as HTMLInputElement;
-      
+
       sendMessage(messageInput.trim()).then(() => {
         console.log("sendMessage 완료");
         setMessageInput("");
@@ -230,12 +225,6 @@ export default function ChatRoom() {
                   );
                 }
 
-                // 일반 메시지
-                console.log("=== 메시지 정렬 디버깅 ===");
-                console.log("message.senderId:", message.senderId, typeof message.senderId);
-                console.log("user.id:", user.id, typeof user.id);
-                console.log("비교 결과:", String(message.senderId) === String(user.id));
-                
                 return (
                   <div
                     key={`${message.id || index}`}
