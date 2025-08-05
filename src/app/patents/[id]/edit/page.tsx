@@ -20,16 +20,7 @@ export default function PatentEditPage() {
 
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!authLoading) {
-      if (!isAuthenticated) {
-        router.push('/login');
-      } else {
-        fetchPostDetail();
-      }
-    }
-  }, [authLoading, isAuthenticated, router]);
-
+useEffect(() => {
   const fetchPostDetail = async () => {
     try {
       const response = await apiClient.get(`/api/posts/${postId}`);
@@ -48,6 +39,16 @@ export default function PatentEditPage() {
       setLoading(false);
     }
   };
+
+  if (!authLoading) {
+    if (!isAuthenticated) {
+      router.push('/login');
+    } else {
+      fetchPostDetail(); // 내부 함수 호출
+    }
+  }
+}, [authLoading, isAuthenticated, router, postId]);
+
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
