@@ -6,6 +6,24 @@ import axios, {
 import { ChatMessage, ChatRoom } from "./websocket";
 import { getAccessTokenCookie, clearAccessTokenCookie, clearRefreshTokenCookie } from './cookieUtils';
 
+// 특허 관련 타입 정의
+interface Patent {
+  id: number;
+  title: string;
+  description: string;
+  category: string;
+  price: number;
+  status: string;
+  createdAt: string;
+}
+
+// 페이지네이션 관련 타입 정의
+interface Pageable {
+  page: number;
+  size: number;
+  sort: string[];
+}
+
 // axios 인스턴스 생성
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || "https://www.devteam10.org",
@@ -143,13 +161,13 @@ export const patentAPI = {
   },
 
   // 내 특허 목록 조회
-  getMyPatents: async (): Promise<unknown[]> => {
+  getMyPatents: async (): Promise<Patent[]> => {
     const response = await apiClient.get("/api/posts/me");
     return response.data;
   },
 
   // 찜한 특허 목록 조회
-  getLikedPatents: async (): Promise<unknown[]> => {
+  getLikedPatents: async (): Promise<Patent[]> => {
     const response = await apiClient.get("/api/likes/me");
     return response.data;
   },
@@ -199,7 +217,7 @@ export const memberAPI = {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData: { message?: string } = await response.json();
       throw new Error(errorData.message || '회원 확인에 실패했습니다.');
     }
   },
@@ -220,7 +238,7 @@ export const memberAPI = {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData: { message?: string } = await response.json();
       throw new Error(errorData.message || '비밀번호 변경에 실패했습니다.');
     }
   },
@@ -297,7 +315,7 @@ export const adminAPI = {
       }>;
       totalElements: number;
       totalPages: number;
-      pageable: any;
+      pageable: Pageable;
     } 
   }> => {
     const response = await apiClient.get('/api/admin/members');
@@ -358,7 +376,7 @@ export const adminAPI = {
       }>;
       totalElements: number;
       totalPages: number;
-      pageable: any;
+      pageable: Pageable;
     } 
   }> => {
     const response = await apiClient.get('/api/admin/patents');
