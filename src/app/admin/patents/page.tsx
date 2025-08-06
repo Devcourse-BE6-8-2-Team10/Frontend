@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { adminAPI } from "@/utils/apiClient";
 import AdminNavigation from "@/components/AdminNavigation";
 import AdminLoadingSpinner from "@/components/AdminLoadingSpinner";
@@ -65,19 +65,15 @@ export default function AdminPatentsPage() {
   const [sortBy, setSortBy] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  const { user, isAuthenticated, loading, data: patents, isLoading, error, refetch } = useAdminTable<Patent>(
-    async () => {
-      const response = await adminAPI.getAllPatents();
-      // API 응답 구조 검증 및 안전한 데이터 추출
-      return Array.isArray(response?.data?.content) 
-        ? response.data.content 
-        : Array.isArray(response?.data) 
-        ? response.data 
-        : Array.isArray(response) 
-        ? response 
-        : [];
-    }
-  );
+  // fetchData 함수를 useCallback으로 감싸서 안정적인 참조 제공
+  const fetchPatents = useCallback(async () => {
+    const response = await adminAPI.getAllPatents();
+    // 백엔드 응답 구조에 맞게 데이터 추출
+    // 백엔드 응답: { resultCode: "200-1", msg: "...", data: { content: [...], ... } }
+    return response?.data?.content || [];
+  }, []);
+
+  const { user, isAuthenticated, loading, data: patents, isLoading, error, refetch } = useAdminTable<Patent>(fetchPatents);
 
   const handlePatentClick = (patentId: number) => {
     setSelectedPatentId(patentId);
@@ -205,7 +201,11 @@ export default function AdminPatentsPage() {
 
             {error && (
               <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-                {error}
+                <div className="font-bold mb-2">오류가 발생했습니다:</div>
+                <div>{error}</div>
+                <div className="mt-2 text-sm text-red-600">
+                  관리자 권한이 있는 계정으로 로그인했는지 확인해주세요.
+                </div>
               </div>
             )}
 
@@ -214,6 +214,9 @@ export default function AdminPatentsPage() {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                 <p className="text-gray-600 font-medium">특허 목록을 불러오는 중...</p>
                 <p className="text-sm text-gray-500 mt-2">잠시만 기다려주세요</p>
+                {error && (
+                  <p className="text-sm text-red-500 mt-2">오류: {error}</p>
+                )}
               </div>
             ) : sortedPatents.length === 0 ? (
               <div className="text-center py-8">
