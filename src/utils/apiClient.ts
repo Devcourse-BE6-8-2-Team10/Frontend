@@ -17,6 +17,13 @@ interface Patent {
   createdAt: string;
 }
 
+// 페이지네이션 관련 타입 정의
+interface Pageable {
+  page: number;
+  size: number;
+  sort: string[];
+}
+
 // axios 인스턴스 생성
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || "https://www.devteam10.org",
@@ -210,7 +217,7 @@ export const memberAPI = {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData: { message?: string } = await response.json();
       throw new Error(errorData.message || '회원 확인에 실패했습니다.');
     }
   },
@@ -231,7 +238,7 @@ export const memberAPI = {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData: { message?: string } = await response.json();
       throw new Error(errorData.message || '비밀번호 변경에 실패했습니다.');
     }
   },
@@ -308,7 +315,7 @@ export const adminAPI = {
       }>;
       totalElements: number;
       totalPages: number;
-      pageable: any;
+      pageable: Pageable;
     } 
   }> => {
     const response = await apiClient.get('/api/admin/members');
@@ -369,7 +376,7 @@ export const adminAPI = {
       }>;
       totalElements: number;
       totalPages: number;
-      pageable: any;
+      pageable: Pageable;
     } 
   }> => {
     const response = await apiClient.get('/api/admin/patents');
