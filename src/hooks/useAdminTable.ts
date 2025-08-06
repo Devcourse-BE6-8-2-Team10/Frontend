@@ -23,9 +23,6 @@ export function useAdminTable<T>(
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // fetchData를 useCallback으로 감싸서 안정적인 참조 제공
-  const stableFetchData = useCallback(() => fetchData(), [fetchData]);
-
   // 공통 인증 로직
   useEffect(() => {
     if (!loading) {
@@ -43,7 +40,7 @@ export function useAdminTable<T>(
     try {
       setIsLoading(true);
       setError("");
-      const result = await stableFetchData();
+      const result = await fetchData();
       setData(result);
     } catch (error: unknown) {
       const apiError = error as ApiError;
@@ -78,14 +75,14 @@ export function useAdminTable<T>(
     } finally {
       setIsLoading(false);
     }
-  }, [stableFetchData]);
+  }, []); // fetchData 의존성 제거
 
-  // 공통 데이터 페칭 로직
+  // 공통 데이터 페칭 로직 - fetchDataHandler 의존성 제거
   useEffect(() => {
     if (user?.role === requiredRole && isAuthenticated && !loading) {
       fetchDataHandler();
     }
-  }, [user?.role, requiredRole, isAuthenticated, loading, fetchDataHandler]);
+  }, [user?.role, requiredRole, isAuthenticated, loading]);
 
   return {
     user,

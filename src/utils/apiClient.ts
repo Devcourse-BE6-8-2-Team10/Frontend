@@ -280,33 +280,46 @@ export interface TradeDetailDto {
 // 관리자 관련 API 함수들
 export const adminAPI = {
   // 전체 회원 목록 조회 (관리자 전용)
-  getAllMembers: async (): Promise<{ data: { content: Array<{
-    id: number;
-    email: string;
-    name: string;
-    role: string;
-    profileUrl?: string;
-    status: string;
-    createdAt: string;
-    modifiedAt?: string;
-    deletedAt?: string;
-  }> } }> => {
+  getAllMembers: async (): Promise<{ 
+    resultCode: string;
+    msg: string;
+    data: { 
+      content: Array<{
+        id: number;
+        email: string;
+        name: string;
+        role: string;
+        profileUrl?: string;
+        status: string;
+        createdAt: string;
+        modifiedAt?: string;
+        deletedAt?: string;
+      }>;
+      totalElements: number;
+      totalPages: number;
+      pageable: any;
+    } 
+  }> => {
     const response = await apiClient.get('/api/admin/members');
     return response.data;
   },
 
   // 회원 상세 정보 조회 (관리자 전용)
-  getMemberDetail: async (memberId: number): Promise<{ data: {
-    id: number;
-    email: string;
-    name: string;
-    role: string;
-    profileUrl?: string;
-    status: string;
-    createdAt: string;
-    modifiedAt?: string;
-    deletedAt?: string;
-  } }> => {
+  getMemberDetail: async (memberId: number): Promise<{ 
+    resultCode: string;
+    msg: string;
+    data: {
+      id: number;
+      email: string;
+      name: string;
+      role: string;
+      profileUrl?: string;
+      status: string;
+      createdAt: string;
+      modifiedAt?: string;
+      deletedAt?: string;
+    } 
+  }> => {
     const response = await apiClient.get(`/api/admin/members/${memberId}`);
     return response.data;
   },
@@ -326,19 +339,28 @@ export const adminAPI = {
   },
 
   // 모든 특허 조회 (관리자 전용)
-  getAllPatents: async (): Promise<{ data: { content: Array<{
-    id: number;
-    title: string;
-    description: string;
-    category: string;
-    price: number;
-    status: string;
-    createdAt: string;
-    modifiedAt?: string;
-    favoriteCnt: number;
-    authorId: number;
-    authorName?: string;
-  }> } }> => {
+  getAllPatents: async (): Promise<{ 
+    resultCode: string;
+    msg: string;
+    data: { 
+      content: Array<{
+        id: number;
+        title: string;
+        description: string;
+        category: string;
+        price: number;
+        status: string;
+        createdAt: string;
+        modifiedAt?: string;
+        favoriteCnt: number;
+        authorId: number;
+        authorName?: string;
+      }>;
+      totalElements: number;
+      totalPages: number;
+      pageable: any;
+    } 
+  }> => {
     const response = await apiClient.get('/api/admin/patents');
     return response.data;
   },
@@ -355,19 +377,23 @@ export const adminAPI = {
   },
 
   // 특허 상세 정보 조회 (관리자 전용)
-  getPatentDetail: async (patentId: number): Promise<{ data: {
-    id: number;
-    title: string;
-    description: string;
-    category: string;
-    price: number;
-    status: string;
-    createdAt: string;
-    modifiedAt?: string;
-    favoriteCnt: number;
-    authorId: number;
-    authorName?: string;
-  } }> => {
+  getPatentDetail: async (patentId: number): Promise<{ 
+    resultCode: string;
+    msg: string;
+    data: {
+      id: number;
+      title: string;
+      description: string;
+      category: string;
+      price: number;
+      status: string;
+      createdAt: string;
+      modifiedAt?: string;
+      favoriteCnt: number;
+      authorId: number;
+      authorName?: string;
+    } 
+  }> => {
     const response = await apiClient.get(`/api/admin/patents/${patentId}`);
     return response.data;
   },
