@@ -6,6 +6,17 @@ import axios, {
 import { ChatMessage, ChatRoom } from "./websocket";
 import { getAccessTokenCookie, clearAccessTokenCookie, clearRefreshTokenCookie } from './cookieUtils';
 
+// 특허 관련 타입 정의
+interface Patent {
+  id: number;
+  title: string;
+  description: string;
+  category: string;
+  price: number;
+  status: string;
+  createdAt: string;
+}
+
 // axios 인스턴스 생성
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || "https://www.devteam10.org",
@@ -143,13 +154,13 @@ export const patentAPI = {
   },
 
   // 내 특허 목록 조회
-  getMyPatents: async (): Promise<unknown[]> => {
+  getMyPatents: async (): Promise<Patent[]> => {
     const response = await apiClient.get("/api/posts/me");
     return response.data;
   },
 
   // 찜한 특허 목록 조회
-  getLikedPatents: async (): Promise<unknown[]> => {
+  getLikedPatents: async (): Promise<Patent[]> => {
     const response = await apiClient.get("/api/likes/me");
     return response.data;
   },
