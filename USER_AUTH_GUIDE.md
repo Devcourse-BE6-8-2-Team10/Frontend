@@ -32,7 +32,7 @@ const response = await apiClient.post('/api/auth/login', {
 ### 2. API 호출
 ```javascript
 // 방법 1: fetch 사용 (헤더 없이도 자동 전송)
-const response = await fetch('http://localhost:8080/api/v1/posts/1');
+const response = await fetch('https://www.devteam10.org/api/v1/posts/1');
 
 // 방법 2: apiClient 사용 (권장)
 const response = await apiClient.get('/api/v1/posts/1');
@@ -137,7 +137,7 @@ function LoginPage() {
 
 ### Frontend (.env.local)
 ```
-NEXT_PUBLIC_BACKEND_URL=http://localhost:8080
+NEXT_PUBLIC_BACKEND_URL=https://www.devteam10.org
 ```
 
 ### Backend (application.yml)

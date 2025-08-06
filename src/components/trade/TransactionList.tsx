@@ -1,16 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { transactionAPI, Transaction } from '@/utils/apiClient';
+import { tradeAPI, TradeDto } from '@/utils/apiClient';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface TransactionListProps {
-  onTransactionSelect: (transaction: Transaction) => void;
+  onTransactionSelect: (transaction: TradeDto) => void;
 }
 
 const TransactionList: React.FC<TransactionListProps> = ({ onTransactionSelect }) => {
   const { user } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<TradeDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
@@ -39,18 +39,21 @@ const TransactionList: React.FC<TransactionListProps> = ({ onTransactionSelect }
     try {
       setLoading(true);
       setError(null);
-      
-      const response = status === 'ALL' 
-        ? await transactionAPI.getTransactions(page, 10)
-        : await transactionAPI.getTransactionsByStatus(status, page, 10);
-      
-      if (page === 0) {
-        setTransactions(response.transactions);
-      } else {
-        setTransactions(prev => [...prev, ...response.transactions]);
+
+      const response = await tradeAPI.getMyTrades(page, 10);
+
+      let filteredTransactions = response.content;
+      if (status !== 'ALL') {
+        filteredTransactions = response.content.filter(trade => trade.status === status);
       }
-      
-      setHasMore(response.hasMore);
+
+      if (page === 0) {
+        setTransactions(filteredTransactions);
+      } else {
+        setTransactions(prev => [...prev, ...filteredTransactions]);
+      }
+
+      setHasMore(!response.last);
       setCurrentPage(page);
     } catch (err) {
       setError('거래 내역을 불러오는데 실패했습니다.');
@@ -92,7 +95,7 @@ const TransactionList: React.FC<TransactionListProps> = ({ onTransactionSelect }
       <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
         <div className="text-center text-red-600">
           <p>{error}</p>
-          <button 
+          <button
             onClick={() => fetchTransactions(0, selectedStatus)}
             className="mt-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
           >
@@ -145,20 +148,17 @@ const TransactionList: React.FC<TransactionListProps> = ({ onTransactionSelect }
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="bg-gray-100 rounded-full w-12 h-12 flex items-center justify-center">
-                    <span className="text-lg">{transaction.patentIcon}</span>
+                    <span className="text-lg">📋</span>
                   </div>
                   <div>
                     <h4 className="font-bold text-[#1a365d] text-sm mb-1">
-                      {transaction.patentTitle}
+                      거래 #{transaction.id}
                     </h4>
                     <p className="text-gray-600 text-xs">
-                      {transaction.buyerId === user?.id ? '구매' : '판매'} • {formatDate(transaction.createdAt)}
+                      {transaction.buyerId === Number(user?.id) ? '구매' : '판매'} • {formatDate(transaction.createdAt)}
                     </p>
                     <p className="text-gray-500 text-xs">
-                      {transaction.buyerId === user?.id 
-                        ? `판매자: ${transaction.sellerName}`
-                        : `구매자: ${transaction.buyerName}`
-                      }
+                      게시글 ID: {transaction.postId}
                     </p>
                   </div>
                 </div>
@@ -173,7 +173,7 @@ const TransactionList: React.FC<TransactionListProps> = ({ onTransactionSelect }
               </div>
             </div>
           ))}
-          
+
           {hasMore && (
             <div className="text-center pt-4">
               <button
@@ -191,4 +191,4 @@ const TransactionList: React.FC<TransactionListProps> = ({ onTransactionSelect }
   );
 };
 
-export default TransactionList; 
+export default TransactionList;

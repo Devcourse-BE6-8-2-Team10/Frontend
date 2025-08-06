@@ -8,7 +8,6 @@ import React, {
   useCallback,
   ReactNode,
 } from "react";
-import { useSearchParams } from "next/navigation";
 import { ChatMessage, ChatRoom, webSocketService } from "../utils/websocket";
 import { useAuth } from "./AuthContext";
 import { getAccessTokenCookie } from "../utils/cookieUtils";
@@ -56,6 +55,7 @@ interface ChatContextType extends ChatState {
   disconnectFromChat: () => void;
   selectRoom: (room: ChatRoom) => void;
   sendMessage: (content: string) => Promise<void>;
+  createRoom: (roomName: string, participants: string[]) => Promise<ChatRoom>; // 채팅방 생성 함수
   createTestRoom: () => void;
   ensureConnected: () => Promise<void>;
   getCurrentRoomMessages: () => ChatMessage[]; // 현재 방 메시지 가져오기
@@ -70,7 +70,6 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth();
-  const searchParams = useSearchParams();
   const [state, setState] = useState<ChatState>({
     rooms: [],
     currentRoom: null,
@@ -88,7 +87,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       console.log(`채팅방 ${roomId} 메시지 로드 시작`);
 
       const token = getAccessTokenCookie();
-      const response = await fetch(`http://localhost:8080/api/chat/rooms/${roomId}/messages`, {
+      const response = await fetch(`https://www.devteam10.org/api/chat/rooms/${roomId}/messages`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -166,7 +165,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch('http://localhost:8080/api/chat/rooms/my', {
+      const response = await fetch('https://www.devteam10.org/api/chat/rooms/my', {
         method: 'GET',
         headers,
         credentials: 'include'
@@ -304,7 +303,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
       console.log("요청 헤더:", headers);
 
-      const response = await fetch('http://localhost:8080/api/chat/rooms/my', {
+      const response = await fetch('https://www.devteam10.org/api/chat/rooms/my', {
         method: 'GET',
         headers,
         credentials: 'include' // 쿠키도 함께 전송
@@ -353,7 +352,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       console.log("=== 모든 채팅방 구독 시작 ===");
       uniqueRooms.forEach((room: ChatRoom) => {
         webSocketService.subscribeToChatRoom(room.id, (rawMessage: RawWebSocketMessage) => {
-          
+
           // 메시지 변환
           const message: ChatMessage = {
             id: rawMessage.id ? String(rawMessage.id) : String(Date.now() + Math.random()),
@@ -547,6 +546,32 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, [user, state.currentRoom, state.isConnected]);
 
+  // 채팅방 생성
+  const createRoom = useCallback(async (roomName: string, participants: string[]) => {
+    try {
+      console.log(`채팅방 생성 시작: ${roomName}`, participants);
+
+      // 서버에 채팅방 생성 요청
+      const newRoom = await chatAPI.createChatRoom({
+        name: roomName,
+        participants: participants,
+      });
+
+      console.log('새 채팅방 생성 완료:', newRoom);
+
+      // 채팅방 목록 새로고침
+      await refreshChatRooms();
+
+      // 새로 생성된 방 선택
+      selectRoom(newRoom);
+
+      return newRoom;
+    } catch (error) {
+      console.error('채팅방 생성 실패:', error);
+      throw error;
+    }
+  }, [refreshChatRooms, selectRoom]);
+
   // 테스트용 방 생성
   const createTestRoom = useCallback(() => {
     if (!user) return;
@@ -623,20 +648,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, [state.currentRoom]);
 
-  // URL 파라미터로 전달된 roomId 처리 - 단순화
-  useEffect(() => {
-    const roomIdFromUrl = searchParams.get('roomId');
-
-    // 한 번만 실행되도록 체크
-    if (roomIdFromUrl && state.rooms.length > 0 && state.isConnected && !state.currentRoom) {
-      const targetRoom = state.rooms.find(room => room.id === Number(roomIdFromUrl));
-      if (targetRoom) {
-        console.log("URL 파라미터로 채팅방 자동 선택:", targetRoom.name);
-        selectRoom(targetRoom);
-      }
-    }
-  }, [searchParams, state.rooms, state.isConnected, state.currentRoom, selectRoom]);
-
   // 컴포넌트 언마운트 시 연결 해제
   useEffect(() => {
     return () => {
@@ -650,6 +661,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     disconnectFromChat,
     selectRoom,
     sendMessage,
+    createRoom, // 채팅방 생성 함수 추가
     createTestRoom,
     ensureConnected,
     getCurrentRoomMessages, // 새로운 함수 추가

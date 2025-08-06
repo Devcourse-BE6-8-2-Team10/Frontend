@@ -11,11 +11,11 @@ import apiClient from "@/utils/apiClient";
 interface Patent {
   id: number;
   title: string;
-  summary: string;
+  description: string;
   price: number;
   status: string;
-  author: string;
   category: string;
+  createdAt: string;
   imageUrl?: string; // 이미지 URL 필드
 }
 
@@ -223,12 +223,11 @@ export default function Home() {
                     </div>
                     <div className="flex flex-col flex-grow">
                       <h3 className="font-bold text-[#1a365d] mb-2 text-sm flex-grow">{patent.title}</h3>
-                      <p className="text-gray-600 text-xs mb-3">{patent.summary}</p>
+                      <p className="text-gray-600 text-xs mb-3">{patent.description}</p>
                       <div className="flex justify-between items-center mb-2 mt-auto">
                         <span className="font-bold text-base text-[#1a365d]">₩{patent.price.toLocaleString()}</span>
                         <span className={`bg-${patent.status === '판매중' ? 'green' : patent.status === '예약중' ? 'yellow' : 'red'}-100 text-${patent.status === '판매중' ? 'green' : patent.status === '예약중' ? 'yellow' : 'red'}-800 px-2 py-1 rounded-full text-xs`}>{patent.status}</span>
                       </div>
-                      <p className="text-gray-500 text-xs mb-3">{patent.author}</p>
                       <div className="flex gap-2">
                         <button className="text-gray-400 hover:text-red-500 transition-colors text-sm">❤️</button>
                         <button className="text-gray-400 hover:text-blue-500 transition-colors text-sm">📤</button>
@@ -264,12 +263,11 @@ export default function Home() {
                   </div>
                   <div className="flex flex-col flex-grow">
                     <h3 className="font-bold text-[#1a365d] mb-2 text-sm flex-grow">{patent.title}</h3>
-                    <p className="text-gray-600 text-xs mb-3">{patent.summary}</p>
+                    <p className="text-gray-600 text-xs mb-3">{patent.description}</p>
                     <div className="flex justify-between items-center mb-2 mt-auto">
                       <span className="font-bold text-base text-[#1a365d]">₩{patent.price.toLocaleString()}</span>
                       <span className={`bg-${patent.status === '판매중' ? 'green' : patent.status === '예약중' ? 'yellow' : 'red'}-100 text-${patent.status === '판매중' ? 'green' : patent.status === '예약중' ? 'yellow' : 'red'}-800 px-2 py-1 rounded-full text-xs`}>{patent.status}</span>
                     </div>
-                    <p className="text-gray-500 text-xs mb-3">{patent.author}</p>
                     <div className="flex gap-2">
                       <button className="text-gray-400 hover:text-red-500 transition-colors text-sm">❤️</button>
                       <button className="text-gray-400 hover:text-blue-500 transition-colors text-sm">📤</button>

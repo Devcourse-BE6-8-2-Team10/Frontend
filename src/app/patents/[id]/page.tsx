@@ -12,6 +12,9 @@ import { tradeAPI } from '@/utils/apiClient';
 const statusMap: { [key: string]: string } = {
   SALE: '판매중',
   SOLD_OUT: '판매완료',
+  SOLD: '판매완료',
+  RESERVED: '예약중',
+  AVAILABLE: '판매중',
 };
 
 interface FileUploadResponse {
@@ -37,6 +40,15 @@ interface PostDetail {
   ownerName: string;
   abstract: string;
   files: FileUploadResponse[];
+  // API 응답에서 올 수 있는 다른 작성자 필드들
+  writerName?: string;
+  memberName?: string;
+  authorName?: string;
+  userName?: string;
+  member?: {
+    name: string;
+    email: string;
+  };
 }
 
 const categoryNameMap: { [key: string]: string } = {
@@ -74,6 +86,7 @@ const fetchPostDetail = async (postId: string) => {
   const filesResponse = await apiClient.get(`/api/posts/${postId}/files`);
   const postData = response.data.data || response.data;
   const filesData = filesResponse.data.data || [];
+  
   return {
     ...postData,
     abstract: postData.description,
@@ -105,6 +118,17 @@ export default function PatentDetailPage() {
   const [likeLoading, setLikeLoading] = useState(false);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [isBuying, setIsBuying] = useState(false);
+
+  // 작성자 이름을 가져오는 함수
+  const getAuthorName = (post: PostDetail): string => {
+    return post.writerName ||
+           post.ownerName || 
+           post.memberName || 
+           post.authorName || 
+           post.userName || 
+           post.member?.name || 
+           '정보 없음';
+  };
 
   useEffect(() => {
     if (!authLoading) {
@@ -177,7 +201,7 @@ export default function PatentDetailPage() {
           setTimeout(() => {
             router.push(`/chat?roomId=${chatRoomId}`);
           }, 300);
-        } catch (refreshError) {
+        } catch {
           router.push(`/chat?roomId=${chatRoomId}`);
         }
       } else {
@@ -397,7 +421,7 @@ export default function PatentDetailPage() {
                     찜: {post.favoriteCnt}
                   </span>
                   <span className="text-gray-500">
-                    작성자: {post.ownerName || '정보 없음'}
+                    작성자: {getAuthorName(post)}
                   </span>
                   <span className="text-gray-500">
                     기술분야: {categoryNameMap[post.category] || post.category}
@@ -441,7 +465,8 @@ export default function PatentDetailPage() {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
-              {post.status === 'SALE' && (
+              {/* 구매하기 버튼 - 판매 가능한 상태이고 본인 게시글이 아닐 때만 표시 */}
+              {(post.status === 'SALE' || post.status === 'AVAILABLE' || post.status === '판매중') && user?.name !== getAuthorName(post) && (
                 <button
                   className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handleBuy}
@@ -450,13 +475,18 @@ export default function PatentDetailPage() {
                   {isBuying ? '구매 요청 중...' : '구매하기'}
                 </button>
               )}
-              <button
-                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handlePurchaseInquiry}
-                disabled={isCreatingRoom}
-              >
-                {isCreatingRoom ? '채팅방 생성 중...' : '구매 문의'}
-              </button>
+              
+              {/* 구매 문의 버튼 - 본인 게시글이 아닐 때만 표시 */}
+              {user?.name !== getAuthorName(post) && (
+                <button
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handlePurchaseInquiry}
+                  disabled={isCreatingRoom}
+                >
+                  {isCreatingRoom ? '채팅방 생성 중...' : '구매 문의'}
+                </button>
+              )}
+              
               <button
                 className="border border-purple-600 text-purple-600 hover:bg-purple-600 hover:text-white px-6 py-3 rounded-lg transition-colors flex-1"
                 onClick={toggleLike}
@@ -468,7 +498,7 @@ export default function PatentDetailPage() {
                 공유하기
               </button>
             </div>
-            {user?.name === post.ownerName && (
+            {user?.name === getAuthorName(post) && (
               <div className="flex gap-4 mt-6">
                 <button
                   className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600"
